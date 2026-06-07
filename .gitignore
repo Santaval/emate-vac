@@ -1,36 +1,60 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# --- Dependencies ---
 /node_modules
 /.pnp
 .pnp.js
 
-# testing
+# --- Testing ---
 /coverage
 
-# next.js
+# --- Next.js ---
 /.next/
 /out/
 
-# production
+# --- Production Build ---
 /build
 
-# misc
-.DS_Store
+# --- Misc ---
 *.pem
 
-# debug
+# --- Debug Logs ---
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
 
-# local env files
+# --- Local Environment ---
 .env*.local
 .env
+.env.local
+.env.*.local
 
-# vercel
+# --- Vercel ---
 .vercel
 
-# typescript
+# --- TypeScript ---
 *.tsbuildinfo
 next-env.d.ts
+
+# --- Docker ---
+.docker/
+docker-compose.override.yml
+
+# --- Docker Databases & Storage ---
+*.db
+*.sqlite
+/data/
+/db-data/
+/volumes/
+
+# --- Docker Logs ---
+.docker/*.log
+logs/docker/
+
+# --- Operating System Files ---
+.DS_Store
+Thumbs.db
+
+# --- Railway ---
+.railway/
