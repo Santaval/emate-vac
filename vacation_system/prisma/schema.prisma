@@ -248,6 +248,7 @@ model profesor {
   prof_cobertura_prof_cobertura_id_cubriendoToprofesor prof_cobertura[]      @relation("prof_cobertura_id_cubriendoToprofesor")
   prof_jornada                                         prof_jornada[]
   proy_nombramiento                                    proy_nombramiento[]
+  usuario                                              usuario?
 }
 
 model proy_centro {
@@ -320,6 +321,55 @@ model proyecto {
   proy_tipo       proy_tipo?           @relation(fields: [id_tipo], references: [id], onDelete: Restrict)
 }
 
+model usuario {
+  id            Int             @id @default(autoincrement())
+  id_profesor   Int             @unique(map: "usuario_id_profesor_unique")
+  username      String          @unique(map: "usuario_username_unique") @db.VarChar(50)
+  password_hash String          @db.VarChar(255)
+  activo        Boolean         @default(true)
+  profesor      profesor        @relation(fields: [id_profesor], references: [id])
+  usuario_rol   usuario_rol[]
+  vac_revision  vac_revision[]
+  vac_solicitud vac_solicitud[]
+}
+
+model usuario_rol {
+  id_usuario Int
+  rol        vac_rol_enum
+  usuario    usuario      @relation(fields: [id_usuario], references: [id], onDelete: Cascade)
+
+  @@id([id_usuario, rol])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model vac_revision {
+  id             Int             @id @default(autoincrement())
+  id_solicitud   Int
+  id_usuario     Int
+  rol_revisor    vac_rol_enum
+  accion         vac_accion_enum
+  comentario     String?         @db.VarChar(500)
+  fecha_revision DateTime        @default(now()) @db.Timestamp(6)
+  vac_solicitud  vac_solicitud   @relation(fields: [id_solicitud], references: [id])
+  usuario        usuario         @relation(fields: [id_usuario], references: [id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model vac_solicitud {
+  id                 Int             @id @default(autoincrement())
+  id_usuario         Int
+  fecha_inicio       DateTime        @db.Date
+  fecha_fin          DateTime        @db.Date
+  dias_habiles       Int             @db.SmallInt
+  observacion        String?         @db.VarChar(300)
+  estado             vac_estado_enum @default(Borrador)
+  paso_actual        Int?            @db.SmallInt
+  fecha_creacion     DateTime        @default(now()) @db.Timestamp(6)
+  fecha_modificacion DateTime        @default(now()) @db.Timestamp(6)
+  vac_revision       vac_revision[]
+  usuario            usuario         @relation(fields: [id_usuario], references: [id])
+}
+
 enum dia_horario_enum {
   L
   K
@@ -341,19 +391,38 @@ enum estado_proyecto_enum {
 }
 
 enum jornada_fraccion_tipo {
-  CERO     @map("0")
-  UN_OCTAVO  @map("1/8")
-  UN_CUARTO  @map("1/4")
-  TRES_OCTAVOS @map("3/8")
-  UN_MEDIO   @map("1/2")
+  CERO          @map("0")
+  UN_OCTAVO     @map("1/8")
+  UN_CUARTO     @map("1/4")
+  TRES_OCTAVOS  @map("3/8")
+  UN_MEDIO      @map("1/2")
   CINCO_OCTAVOS @map("5/8")
-  TRES_CUARTOS @map("3/4")
+  TRES_CUARTOS  @map("3/4")
   SIETE_OCTAVOS @map("7/8")
-  UNO      @map("1")
+  UNO           @map("1")
 }
 
 enum regimen_salarial_enum {
   Salario_Compuesto @map("Salario Compuesto")
   Salario_Global    @map("Salario Global")
   NaN
+}
+
+enum vac_accion_enum {
+  Aprobado
+  Rechazado
+}
+
+enum vac_estado_enum {
+  Borrador
+  Enviado
+  Aprobado
+  Rechazado
+}
+
+enum vac_rol_enum {
+  Profesor
+  Jefe_de_Departamento @map("Jefe de Departamento")
+  Jefe_Administrativo  @map("Jefe Administrativo")
+  Director_de_Escuela  @map("Director de Escuela")
 }
