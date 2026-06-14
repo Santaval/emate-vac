@@ -1,6 +1,1 @@
-export type RequestStatus =
-  | "draft"
-  | "submitted"
-  | "approved"
-  | "rejected"
-  | "cancelled";
+export type { vac_estado_enum as VacEstado } from "@/app/generated/prisma/client";
