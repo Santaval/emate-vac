@@ -6,6 +6,7 @@ const allowedOrigins = (process.env.ALLOWED_FRAME_ORIGINS || "http://localhost:3
   .join(" ");
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   async headers() {
     return [
       {

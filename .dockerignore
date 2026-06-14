@@ -1,0 +1,5 @@
+vacation_system/node_modules
+vacation_system/.next
+vacation_system/.env*
+vacation_system/app/generated
+docs
