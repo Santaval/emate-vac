@@ -33,43 +33,43 @@ export default function RequestsPage() {
   }, []);
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-zinc-800">Solicitudes de vacaciones</h1>
+        <h1 className="text-[28px] leading-[150%] text-page-title">Solicitudes de vacaciones</h1>
         <Link
           href="/vacation/requests/new"
-          className="bg-blue-700 text-white text-sm px-4 py-2 rounded hover:bg-blue-800 transition-colors"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm px-4 py-2 rounded-md font-medium transition-colors"
         >
           + Nueva solicitud
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg border shadow-sm">
+      <div className="table-container">
         {loading ? (
-          <p className="px-4 py-6 text-sm text-zinc-400">Cargando…</p>
+          <p className="px-4 py-6 text-sm text-muted-foreground">Cargando…</p>
         ) : solicitudes.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-zinc-400">No hay solicitudes.</p>
+          <p className="px-4 py-6 text-sm text-muted-foreground">No hay solicitudes.</p>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full">
             <thead>
-              <tr className="border-b text-left text-zinc-500 text-xs uppercase tracking-wide">
-                <th className="px-4 py-3">Profesor</th>
-                <th className="px-4 py-3">Período</th>
-                <th className="px-4 py-3 text-center">Días</th>
-                <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3"></th>
+              <tr className="hover:bg-transparent bg-table-header border-b border-table-row-border">
+                <th className="font-semibold text-base h-10 px-3 text-left">Profesor</th>
+                <th className="font-semibold text-base h-10 px-3 text-left">Período</th>
+                <th className="font-semibold text-base h-10 px-3 text-center">Días</th>
+                <th className="font-semibold text-base h-10 px-3 text-left">Estado</th>
+                <th className="font-semibold text-base h-10 px-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody>
               {solicitudes.map((s) => (
-                <tr key={s.id} className="hover:bg-zinc-50">
-                  <td className="px-4 py-3 text-zinc-700">{s.usuario.nombre}</td>
-                  <td className="px-4 py-3 text-zinc-600">
+                <tr key={s.id} className="border-b border-table-row-border hover:bg-table-hover bg-table-row">
+                  <td className="py-2 px-3 text-sm text-foreground">{s.usuario.nombre}</td>
+                  <td className="py-2 px-3 text-sm text-foreground">
                     {new Date(s.fecha_inicio).toLocaleDateString("es-CR")} →{" "}
                     {new Date(s.fecha_fin).toLocaleDateString("es-CR")}
                   </td>
-                  <td className="px-4 py-3 text-center text-zinc-600">{s.dias_habiles}</td>
-                  <td className="px-4 py-3">
+                  <td className="py-2 px-3 text-sm text-center text-foreground">{s.dias_habiles}</td>
+                  <td className="py-2 px-3 text-sm">
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         ESTADO_COLOR[s.estado] ?? "bg-zinc-100 text-zinc-600"
@@ -78,10 +78,10 @@ export default function RequestsPage() {
                       {s.estado}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="py-2 px-3 text-sm text-right">
                     <Link
                       href={`/vacation/requests/${s.id}`}
-                      className="text-blue-600 hover:underline text-xs"
+                      className="text-primary hover:underline text-xs"
                     >
                       Ver
                     </Link>

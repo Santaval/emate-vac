@@ -19,6 +19,24 @@
   --sidebar-accent: #dddddd;
   --sidebar-accent-foreground: #898989;
   --sidebar-border: #e5e7eb;
+
+  /* Table */
+  --table-bg: #f3f3f3;
+  --table-row: #f3f3f3;
+  --table-header: #f3f3f3;
+  --table-border: #9d9d9d;
+  --table-row-border: #9d9d9d;
+  --table-hover: rgba(107, 114, 128, 0.1);
+
+  /* Action buttons */
+  --action-view-bg: #005da4;
+  --action-view-hover: #013ca9;
+  --action-delete-bg: #e85f61;
+  --action-delete-hover: #b42f31;
+  --action-text: #ffffff;
+
+  /* Page title */
+  --page-title: #4e4e4e;
 }
 
 .dark {
@@ -38,6 +56,24 @@
   --sidebar-accent: #3a3a3a;
   --sidebar-accent-foreground: #ededed;
   --sidebar-border: #333333;
+
+  /* Table dark */
+  --table-bg: #181818;
+  --table-row: #181818;
+  --table-header: #181818;
+  --table-border: #9d9d9d;
+  --table-row-border: #9d9d9d;
+  --table-hover: rgba(156, 163, 175, 0.1);
+
+  /* Action buttons stay the same in dark */
+  --action-view-bg: #005da4;
+  --action-view-hover: #013ca9;
+  --action-delete-bg: #e85f61;
+  --action-delete-hover: #b42f31;
+  --action-text: #ffffff;
+
+  /* Page title dark */
+  --page-title: #ededed;
 }
 
 @theme inline {
@@ -56,6 +92,18 @@
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
+  --color-table-bg: var(--table-bg);
+  --color-table-row: var(--table-row);
+  --color-table-header: var(--table-header);
+  --color-table-border: var(--table-border);
+  --color-table-row-border: var(--table-row-border);
+  --color-table-hover: var(--table-hover);
+  --color-action-view-bg: var(--action-view-bg);
+  --color-action-view-hover: var(--action-view-hover);
+  --color-action-delete-bg: var(--action-delete-bg);
+  --color-action-delete-hover: var(--action-delete-hover);
+  --color-action-text: var(--action-text);
+  --color-page-title: var(--page-title);
   --font-sans: var(--font-rubik);
 }
 
@@ -63,4 +111,11 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-rubik), Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .table-container {
+    @apply rounded-lg bg-table-bg shadow-sm overflow-hidden;
+    border: 2px solid var(--table-border);
+  }
 }

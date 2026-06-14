@@ -40,6 +40,9 @@ const ESTADO_COLOR: Record<string, string> = {
   Rechazado: "bg-red-100 text-red-700",
 };
 
+const inputClass =
+  "w-full border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none";
+
 export default function RequestDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -91,18 +94,18 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     }
   }
 
-  if (loading) return <p className="text-sm text-zinc-400 p-4">Cargando…</p>;
-  if (!solicitud) return <p className="text-sm text-red-500 p-4">Solicitud no encontrada.</p>;
+  if (loading) return <p className="text-sm text-muted-foreground p-4">Cargando…</p>;
+  if (!solicitud) return <p className="text-sm text-red-600 p-4">Solicitud no encontrada.</p>;
 
   const s = solicitud;
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">
       <div className="flex items-center gap-3">
-        <Link href="/vacation/requests" className="text-zinc-400 hover:text-zinc-600 text-sm">
+        <Link href="/vacation/requests" className="text-muted-foreground hover:text-foreground text-sm transition-colors">
           ← Volver
         </Link>
-        <h1 className="text-xl font-semibold text-zinc-800">Solicitud #{s.id}</h1>
+        <h1 className="text-[28px] leading-[150%] text-page-title">Solicitud #{s.id}</h1>
         <span
           className={`text-xs px-2 py-0.5 rounded-full font-medium ${
             ESTADO_COLOR[s.estado] ?? "bg-zinc-100 text-zinc-600"
@@ -112,38 +115,39 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
         </span>
       </div>
 
-      <div className="bg-white rounded-lg border shadow-sm p-5 space-y-3">
+      {/* Request details card */}
+      <div className="bg-card rounded-lg border border-border shadow-sm p-5 space-y-4">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-zinc-500">Solicitante</p>
-            <p className="font-medium text-zinc-800">{s.usuario.nombre}</p>
+            <p className="text-muted-foreground">Solicitante</p>
+            <p className="font-medium text-foreground mt-0.5">{s.usuario.nombre}</p>
           </div>
           <div>
-            <p className="text-zinc-500">Días hábiles</p>
-            <p className="font-medium text-zinc-800">{s.dias_habiles}</p>
+            <p className="text-muted-foreground">Días hábiles</p>
+            <p className="font-medium text-foreground mt-0.5">{s.dias_habiles}</p>
           </div>
           <div>
-            <p className="text-zinc-500">Fecha inicio</p>
-            <p className="font-medium text-zinc-800">
+            <p className="text-muted-foreground">Fecha inicio</p>
+            <p className="font-medium text-foreground mt-0.5">
               {new Date(s.fecha_inicio).toLocaleDateString("es-CR")}
             </p>
           </div>
           <div>
-            <p className="text-zinc-500">Fecha fin</p>
-            <p className="font-medium text-zinc-800">
+            <p className="text-muted-foreground">Fecha fin</p>
+            <p className="font-medium text-foreground mt-0.5">
               {new Date(s.fecha_fin).toLocaleDateString("es-CR")}
             </p>
           </div>
           {s.paso_actual && (
             <div>
-              <p className="text-zinc-500">Paso actual</p>
-              <p className="font-medium text-zinc-800">{PASO_ROL[s.paso_actual]}</p>
+              <p className="text-muted-foreground">Paso actual</p>
+              <p className="font-medium text-foreground mt-0.5">{PASO_ROL[s.paso_actual]}</p>
             </div>
           )}
           {s.observacion && (
             <div className="col-span-2">
-              <p className="text-zinc-500">Observación</p>
-              <p className="text-zinc-700">{s.observacion}</p>
+              <p className="text-muted-foreground">Observación</p>
+              <p className="text-foreground mt-0.5">{s.observacion}</p>
             </div>
           )}
         </div>
@@ -151,29 +155,33 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Reviewer actions */}
       {s.estado === "Enviado" && (
-        <div className="bg-white rounded-lg border shadow-sm p-5 space-y-3">
-          <h2 className="text-sm font-medium text-zinc-700">Acción de revisión</h2>
+        <div className="bg-card rounded-lg border border-border shadow-sm p-5 space-y-3">
+          <h2 className="text-sm font-semibold text-foreground">Acción de revisión</h2>
           <textarea
             placeholder="Comentario (requerido para rechazar)"
             value={comentario}
             onChange={(e) => setComentario(e.target.value)}
             rows={3}
             maxLength={500}
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className={inputClass}
           />
-          {actionError && <p className="text-sm text-red-600">{actionError}</p>}
+          {actionError && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+              {actionError}
+            </p>
+          )}
           <div className="flex gap-3">
             <button
               disabled={acting}
               onClick={() => handleAction("approve")}
-              className="flex-1 bg-green-600 text-white text-sm px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50 transition-colors"
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-md font-medium disabled:opacity-50 transition-colors"
             >
               Aprobar
             </button>
             <button
               disabled={acting}
               onClick={() => handleAction("reject")}
-              className="flex-1 bg-red-600 text-white text-sm px-4 py-2 rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
+              className="flex-1 bg-action-delete-bg hover:bg-action-delete-hover text-action-text text-sm px-4 py-2 rounded-md font-medium disabled:opacity-50 transition-colors"
             >
               Rechazar
             </button>
@@ -183,12 +191,16 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Submit draft */}
       {s.estado === "Borrador" && (
-        <div className="bg-white rounded-lg border shadow-sm p-5">
-          {actionError && <p className="text-sm text-red-600 mb-3">{actionError}</p>}
+        <div className="bg-card rounded-lg border border-border shadow-sm p-5">
+          {actionError && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2 mb-3">
+              {actionError}
+            </p>
+          )}
           <button
             disabled={acting}
             onClick={handleSubmit}
-            className="bg-blue-700 text-white text-sm px-4 py-2 rounded hover:bg-blue-800 disabled:opacity-50 transition-colors"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm px-4 py-2 rounded-md font-medium disabled:opacity-50 transition-colors"
           >
             Enviar solicitud
           </button>
@@ -197,15 +209,15 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Revision history */}
       {s.vac_revision.length > 0 && (
-        <div className="bg-white rounded-lg border shadow-sm">
-          <div className="px-5 py-3 border-b">
-            <h2 className="text-sm font-medium text-zinc-700">Historial de revisiones</h2>
+        <div className="table-container">
+          <div className="px-5 py-3 border-b border-table-row-border bg-table-header">
+            <h2 className="text-sm font-semibold text-foreground">Historial de revisiones</h2>
           </div>
-          <ul className="divide-y">
+          <ul>
             {s.vac_revision.map((r) => (
-              <li key={r.id} className="px-5 py-3 text-sm">
+              <li key={r.id} className="px-5 py-3 text-sm border-b border-table-row-border last:border-0 bg-table-row">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium text-zinc-700">{r.usuario.nombre}</span>
+                  <span className="font-medium text-foreground">{r.usuario.nombre}</span>
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                       r.accion === "Aprobado"
@@ -216,10 +228,10 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
                     {r.accion}
                   </span>
                 </div>
-                <p className="text-zinc-500 text-xs mt-0.5">
+                <p className="text-muted-foreground text-xs mt-0.5">
                   {r.rol_revisor} · {new Date(r.fecha_revision).toLocaleString("es-CR")}
                 </p>
-                {r.comentario && <p className="text-zinc-600 mt-1">{r.comentario}</p>}
+                {r.comentario && <p className="text-foreground mt-1">{r.comentario}</p>}
               </li>
             ))}
           </ul>

@@ -60,63 +60,70 @@ export default function NewRequestPage() {
     }
   }
 
+  const inputClass =
+    "mt-1 block w-full border border-border rounded-md px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary";
+
   return (
     <div className="max-w-lg mx-auto space-y-6">
-      <h1 className="text-xl font-semibold text-zinc-800">Nueva solicitud de vacaciones</h1>
+      <h1 className="text-[28px] leading-[150%] text-page-title">Nueva solicitud de vacaciones</h1>
 
-      <form className="bg-white rounded-lg border shadow-sm p-6 space-y-4">
+      <form className="bg-card rounded-lg border border-border shadow-sm p-6 space-y-5">
         <div className="grid grid-cols-2 gap-4">
           <label className="block">
-            <span className="text-sm font-medium text-zinc-700">Fecha de inicio</span>
+            <span className="text-sm font-medium text-foreground">Fecha de inicio</span>
             <input
               type="date"
               value={form.fecha_inicio}
               onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })}
               required
-              className="mt-1 block w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={inputClass}
             />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-zinc-700">Fecha de fin</span>
+            <span className="text-sm font-medium text-foreground">Fecha de fin</span>
             <input
               type="date"
               value={form.fecha_fin}
               min={form.fecha_inicio}
               onChange={(e) => setForm({ ...form, fecha_fin: e.target.value })}
               required
-              className="mt-1 block w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={inputClass}
             />
           </label>
         </div>
 
         {form.fecha_inicio && form.fecha_fin && (
-          <p className="text-sm text-zinc-600">
+          <p className="text-sm text-foreground">
             Días hábiles:{" "}
-            <span className={`font-semibold ${dias === 0 ? "text-red-600" : "text-zinc-800"}`}>
+            <span className={`font-semibold ${dias === 0 ? "text-red-600" : "text-primary"}`}>
               {dias}
             </span>
           </p>
         )}
 
         <label className="block">
-          <span className="text-sm font-medium text-zinc-700">Observación (opcional)</span>
+          <span className="text-sm font-medium text-foreground">Observación (opcional)</span>
           <textarea
             value={form.observacion}
             onChange={(e) => setForm({ ...form, observacion: e.target.value })}
             rows={3}
             maxLength={300}
-            className="mt-1 block w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className={`${inputClass} resize-none`}
           />
         </label>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+            {error}
+          </p>
+        )}
 
-        <div className="flex gap-3 pt-2">
+        <div className="flex gap-3 pt-1">
           <button
             type="submit"
             disabled={saving || dias === 0}
             onClick={(e) => handleSubmit(e, "save")}
-            className="flex-1 border border-zinc-300 text-zinc-700 text-sm px-4 py-2 rounded hover:bg-zinc-50 disabled:opacity-50 transition-colors"
+            className="flex-1 border border-border text-foreground text-sm px-4 py-2 rounded-md font-medium hover:bg-table-hover disabled:opacity-50 transition-colors bg-background"
           >
             Guardar borrador
           </button>
@@ -124,7 +131,7 @@ export default function NewRequestPage() {
             type="button"
             disabled={saving || dias === 0}
             onClick={(e) => handleSubmit(e as unknown as React.FormEvent, "submit")}
-            className="flex-1 bg-blue-700 text-white text-sm px-4 py-2 rounded hover:bg-blue-800 disabled:opacity-50 transition-colors"
+            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground text-sm px-4 py-2 rounded-md font-medium disabled:opacity-50 transition-colors"
           >
             Enviar solicitud
           </button>
