@@ -36,7 +36,10 @@ export default function UsersPage() {
   useEffect(() => {
     apiFetch("/api/vacation/users")
       .then(async (r) => {
-        if (r.status === 403) { setError("Acceso denegado. Solo el Jefe Administrativo puede ver esta sección."); return; }
+        if (r.status === 403) {
+          setError("Acceso denegado. Solo el Jefe Administrativo puede ver esta sección.");
+          return;
+        }
         setUsers(await r.json());
       })
       .finally(() => setLoading(false));
@@ -65,46 +68,59 @@ export default function UsersPage() {
     setSaving(null);
   }
 
-  if (loading) return <p className="text-sm text-zinc-400">Cargando…</p>;
-  if (error) return <p className="text-sm text-red-600">{error}</p>;
+  if (loading) return <p className="text-sm text-muted-foreground">Cargando…</p>;
+  if (error) return (
+    <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-4 py-3">
+      {error}
+    </p>
+  );
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4">
-      <h1 className="text-xl font-semibold text-zinc-800">Gestión de usuarios</h1>
-      <p className="text-sm text-zinc-500">
-        Asigne roles de vacaciones a los usuarios que han iniciado sesión en el sistema.
-      </p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-[28px] leading-[150%] text-page-title">Gestión de usuarios</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Asigne roles de vacaciones a los usuarios que han iniciado sesión en el sistema.
+        </p>
+      </div>
 
-      <div className="bg-white rounded-lg border shadow-sm">
+      <div className="table-container">
         {users.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-zinc-400">
+          <p className="px-4 py-6 text-sm text-muted-foreground">
             No hay usuarios registrados aún. Los usuarios aparecen aquí la primera vez que inician sesión.
           </p>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full">
             <thead>
-              <tr className="border-b text-left text-zinc-500 text-xs uppercase tracking-wide">
-                <th className="px-4 py-3">Usuario</th>
+              <tr className="hover:bg-transparent bg-table-header border-b border-table-row-border">
+                <th className="font-semibold text-base h-10 px-3 text-left">Usuario</th>
                 {ALL_ROLES.map((r) => (
-                  <th key={r} className="px-2 py-3 text-center">{ROL_LABEL[r]}</th>
+                  <th key={r} className="font-semibold text-base h-10 px-3 text-center">
+                    {ROL_LABEL[r]}
+                  </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody>
               {users.map((u) => (
-                <tr key={u.id} className={saving === u.id ? "opacity-50" : ""}>
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-zinc-800">{u.nombre}</p>
-                    <p className="text-zinc-400 text-xs">{u.username}</p>
+                <tr
+                  key={u.id}
+                  className={`border-b border-table-row-border hover:bg-table-hover bg-table-row ${
+                    saving === u.id ? "opacity-50" : ""
+                  }`}
+                >
+                  <td className="py-2 px-3 text-sm">
+                    <p className="font-medium text-foreground">{u.nombre}</p>
+                    <p className="text-muted-foreground text-xs">{u.username}</p>
                   </td>
                   {ALL_ROLES.map((rol) => (
-                    <td key={rol} className="px-2 py-3 text-center">
+                    <td key={rol} className="py-2 px-3 text-sm text-center">
                       <input
                         type="checkbox"
                         checked={u.usuario_rol.some((r) => r.rol === rol)}
                         onChange={(e) => updateRoles(u, rol, e.target.checked)}
                         disabled={saving === u.id}
-                        className="h-4 w-4 accent-blue-700"
+                        className="h-4 w-4 accent-primary"
                       />
                     </td>
                   ))}

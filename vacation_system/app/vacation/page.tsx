@@ -36,10 +36,10 @@ export default function VacationDashboard() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-zinc-800">Panel de Vacaciones</h1>
+        <h1 className="text-[28px] leading-[150%] text-page-title">Panel de Vacaciones</h1>
         <Link
           href="/vacation/requests/new"
-          className="bg-blue-700 text-white text-sm px-4 py-2 rounded hover:bg-blue-800 transition-colors"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm px-4 py-2 rounded-md font-medium transition-colors"
         >
           + Nueva solicitud
         </Link>
@@ -47,37 +47,37 @@ export default function VacationDashboard() {
 
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Pendientes", value: pending, color: "text-blue-700" },
-          { label: "Borradores", value: draft, color: "text-zinc-600" },
-          { label: "Total", value: solicitudes.length, color: "text-zinc-800" },
+          { label: "Pendientes", value: pending, color: "text-primary" },
+          { label: "Borradores", value: draft, color: "text-muted-foreground" },
+          { label: "Total", value: solicitudes.length, color: "text-foreground" },
         ].map(({ label, value, color }) => (
-          <div key={label} className="bg-white rounded-lg border p-4 shadow-sm">
-            <p className="text-xs text-zinc-500 uppercase tracking-wide">{label}</p>
+          <div key={label} className="bg-card rounded-lg border border-border p-4 shadow-sm">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
             <p className={`text-2xl font-bold mt-1 ${color}`}>{loading ? "—" : value}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-lg border shadow-sm">
-        <div className="px-4 py-3 border-b">
-          <h2 className="text-sm font-medium text-zinc-700">Solicitudes recientes</h2>
+      <div className="table-container">
+        <div className="px-4 py-3 border-b border-table-row-border bg-table-header">
+          <h2 className="text-sm font-semibold text-foreground">Solicitudes recientes</h2>
         </div>
         {loading ? (
-          <p className="px-4 py-6 text-sm text-zinc-400">Cargando…</p>
+          <p className="px-4 py-6 text-sm text-muted-foreground">Cargando…</p>
         ) : solicitudes.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-zinc-400">No hay solicitudes aún.</p>
+          <p className="px-4 py-6 text-sm text-muted-foreground">No hay solicitudes aún.</p>
         ) : (
-          <ul className="divide-y">
+          <ul>
             {solicitudes.slice(0, 5).map((s) => (
-              <li key={s.id}>
+              <li key={s.id} className="border-b border-table-row-border last:border-0 bg-table-row">
                 <Link
                   href={`/vacation/requests/${s.id}`}
-                  className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 transition-colors"
+                  className="flex items-center justify-between px-4 py-3 hover:bg-table-hover transition-colors"
                 >
-                  <span className="text-sm text-zinc-700">
+                  <span className="text-sm text-foreground">
                     {new Date(s.fecha_inicio).toLocaleDateString("es-CR")} →{" "}
                     {new Date(s.fecha_fin).toLocaleDateString("es-CR")}
-                    <span className="ml-2 text-zinc-400">({s.dias_habiles} días)</span>
+                    <span className="ml-2 text-muted-foreground">({s.dias_habiles} días)</span>
                   </span>
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -92,8 +92,8 @@ export default function VacationDashboard() {
           </ul>
         )}
         {solicitudes.length > 5 && (
-          <div className="px-4 py-3 border-t">
-            <Link href="/vacation/requests" className="text-sm text-blue-600 hover:underline">
+          <div className="px-4 py-3 border-t border-table-row-border bg-table-row">
+            <Link href="/vacation/requests" className="text-sm text-primary hover:underline">
               Ver todas →
             </Link>
           </div>
