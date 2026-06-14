@@ -12,6 +12,10 @@ COPY vacation_system/ .
 # Generate Prisma client from schema
 RUN npx prisma generate
 
+# Build-time env vars (Next.js bakes headers() into the build manifest)
+ARG ALLOWED_FRAME_ORIGINS=http://localhost:3000
+ENV ALLOWED_FRAME_ORIGINS=$ALLOWED_FRAME_ORIGINS
+
 # Build Next.js standalone output
 RUN npm run build
 
