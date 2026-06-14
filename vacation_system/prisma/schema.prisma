@@ -1,333 +1,20 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  provider        = "prisma-client"
+  output          = "../app/generated/prisma"
+
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-model admin_nombramiento {
-  id                   Int                  @id @default(autoincrement())
-  id_profesor          Int
-  id_cargo             Int
-  id_ciclo             Int
-  id_puesto            Int?
-  carga_horas          Int                  @default(0) @db.SmallInt
-  ref_doc              String?              @db.VarChar(20)
-  vigencia_inicio      DateTime             @db.Date
-  vigencia_fin         DateTime             @db.Date
-  administrativo_cargo administrativo_cargo @relation(fields: [id_cargo], references: [id])
-  ciclo                ciclo                @relation(fields: [id_ciclo], references: [id])
-  profesor             profesor             @relation(fields: [id_profesor], references: [id])
-  admin_puesto         admin_puesto?        @relation(fields: [id_puesto], references: [id], onDelete: Restrict)
-
-  @@unique([id_profesor, id_cargo, id_ciclo], map: "admin_nombramiento_unique")
-}
-
-model admin_puesto {
-  id                   Int                  @id @default(autoincrement())
-  id_cargo             Int
-  nombre               String               @db.VarChar(100)
-  estado               estado_enum          @default(Activo)
-  admin_nombramiento   admin_nombramiento[]
-  administrativo_cargo administrativo_cargo @relation(fields: [id_cargo], references: [id])
-}
-
-model administrativo_cargo {
-  id                 Int                  @id @default(autoincrement())
-  nombre             String               @unique(map: "administrativo_cargo_nombre_unique") @db.VarChar(100)
-  estado             estado_enum          @default(Activo)
-  admin_nombramiento admin_nombramiento[]
-  admin_puesto       admin_puesto[]
-}
-
-model ciclo {
-  id                        Int                         @id @default(autoincrement())
-  periodo                   Int                         @db.SmallInt
-  anno                      Int                         @db.SmallInt
-  admin_nombramiento        admin_nombramiento[]
-  curso_grupo               curso_grupo[]
-  presupuesto_configuracion presupuesto_configuracion[]
-  prof_cobertura            prof_cobertura[]
-  prof_estado               prof_estado[]
-  prof_jornada              prof_jornada[]
-  proy_ciclo                proy_ciclo[]
-
-  @@unique([periodo, anno], map: "ciclo_periodo_anno_unique")
-}
-
-model curso {
-  id              Int           @id @default(autoincrement())
-  sigla           String        @unique(map: "curso_sigla_unique") @db.VarChar(6)
-  nombre          String        @db.VarChar(100)
-  id_departamento Int
-  creditaje       Int?          @db.SmallInt
-  horas           Int           @default(0) @db.SmallInt
-  estado          estado_enum   @default(Activo)
-  departamento    departamento  @relation(fields: [id_departamento], references: [id], onUpdate: NoAction)
-  curso_grupo     curso_grupo[]
-}
-
-model curso_grupo {
-  id                 Int                  @id @default(autoincrement())
-  id_curso           Int
-  id_ciclo           Int
-  numero             Int                  @db.SmallInt
-  estado             estado_enum          @default(Activo)
-  ciclo              ciclo                @relation(fields: [id_ciclo], references: [id])
-  curso              curso                @relation(fields: [id_curso], references: [id])
-  curso_horario      curso_horario[]
-  curso_nombramiento curso_nombramiento[]
-
-  @@unique([id_curso, id_ciclo, numero], map: "uq_curso_grupo_numero")
-}
-
-model curso_horario {
-  id           Int              @id @default(autoincrement())
-  id_grupo     Int
-  dia          dia_horario_enum
-  id_edificio  Int?
-  aula         String?          @db.VarChar(3)
-  hora_entrada Int?             @db.SmallInt
-  hora_salida  Int?             @db.SmallInt
-  edificio     edificio?        @relation(fields: [id_edificio], references: [id], onDelete: Restrict)
-  curso_grupo  curso_grupo      @relation(fields: [id_grupo], references: [id])
-
-  @@unique([id_grupo, dia], map: "curso_horario_dia_unique")
-}
-
-model curso_nombramiento {
-  id          Int         @id @default(autoincrement())
-  id_grupo    Int
-  id_profesor Int
-  carga_horas Int         @default(0) @db.SmallInt
-  observacion String?     @db.VarChar(50)
-  curso_grupo curso_grupo @relation(fields: [id_grupo], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  profesor    profesor    @relation(fields: [id_profesor], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "profesor_id_profesor_fkey")
-
-  @@unique([id_grupo, id_profesor], map: "curso_nombramiento_profesor_grupo_unique")
-}
-
-model departamento {
-  id     Int         @id @default(autoincrement())
-  nombre String      @unique(map: "departamento_nombre_unique") @db.VarChar(100)
-  estado estado_enum @default(Activo)
-  curso  curso[]
-}
-
-model edificio {
-  id             Int             @id @default(autoincrement())
-  sigla_edificio String          @unique(map: "edificio_sigla_unique") @db.VarChar(2)
-  nombre         String          @unique(map: "edificio_nombre_unique") @db.VarChar(50)
-  estado         estado_enum     @default(Activo)
-  curso_horario  curso_horario[]
-}
-
-model presupuesto {
-  id                        Int                         @id @default(autoincrement())
-  descripcion               String                      @db.VarChar(100)
-  orden                     Int                         @unique @db.SmallInt
-  activo                    Boolean                     @default(true)
-  estado                    estado_enum                 @default(Activo)
-  presupuesto_configuracion presupuesto_configuracion[]
-  prof_cobertura            prof_cobertura[]
-  prof_jornada              prof_jornada[]
-}
-
-model presupuesto_configuracion {
-  id                Int                 @id @default(autoincrement())
-  id_presupuesto    Int
-  id_ciclo          Int
-  tcs               Decimal             @default(0) @db.Decimal(5, 3)
-  horas             Int                 @default(0)
-  ciclo             ciclo               @relation(fields: [id_ciclo], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  presupuesto       presupuesto         @relation(fields: [id_presupuesto], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  presupuesto_plaza presupuesto_plaza[]
-
-  @@unique([id_presupuesto, id_ciclo], map: "presupuesto_configuracion_presupuesto_ciclo_unique")
-}
-
-model presupuesto_plaza {
-  id                           Int                       @id @default(autoincrement())
-  id_presupuesto_configuracion Int
-  numPlaza                     String                    @unique(map: "presupuesto_plaza_num_plaza_unique") @db.VarChar(50)
-  jornada_plaza                jornada_fraccion_tipo
-  presupuesto_configuracion    presupuesto_configuracion @relation(fields: [id_presupuesto_configuracion], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  prof_jornada                 prof_jornada[]
-}
-
-model prof_categoria {
-  id          Int           @id @default(autoincrement())
-  nombre      String        @unique(map: "prof_categoria_nombre_unique") @db.VarChar(50)
-  estado      estado_enum   @default(Activo)
-  prof_estado prof_estado[]
-}
-
-model prof_cobertura {
-  id_ciclo                                       Int
-  id_becario                                     Int
-  id_cubriendo                                   Int
-  fraccion_cobertura                             jornada_fraccion_tipo
-  id_presupuesto                                 Int
-  profesor_prof_cobertura_id_becarioToprofesor   profesor              @relation("prof_cobertura_id_becarioToprofesor", fields: [id_becario], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  ciclo                                          ciclo                 @relation(fields: [id_ciclo], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  profesor_prof_cobertura_id_cubriendoToprofesor profesor              @relation("prof_cobertura_id_cubriendoToprofesor", fields: [id_cubriendo], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  presupuesto                                    presupuesto           @relation(fields: [id_presupuesto], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@id([id_ciclo, id_becario, id_cubriendo])
-}
-
-model prof_condicion {
-  id          Int           @id @default(autoincrement())
-  nombre      String        @unique(map: "prof_condicion_nombre_unique") @db.VarChar(50)
-  estado      estado_enum   @default(Activo)
-  prof_estado prof_estado[]
-}
-
-model prof_estado {
-  id_profesor    Int
-  id_ciclo       Int
-  id_condicion   Int
-  id_grado       Int
-  id_categoria   Int
-  ciclo          ciclo          @relation(fields: [id_ciclo], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "prof_estado_ciclo_fkey")
-  prof_categoria prof_categoria @relation(fields: [id_categoria], references: [id], onUpdate: NoAction)
-  prof_condicion prof_condicion @relation(fields: [id_condicion], references: [id], onUpdate: NoAction)
-  prof_grado     prof_grado     @relation(fields: [id_grado], references: [id], onUpdate: NoAction)
-
-  @@id([id_profesor, id_ciclo])
-}
-
-model prof_grado {
-  id          Int           @id @default(autoincrement())
-  nombre      String        @unique(map: "prof_grado_nombre_unique") @db.VarChar(50)
-  estado      estado_enum   @default(Activo)
-  prof_estado prof_estado[]
-}
-
-model prof_jornada {
-  id_profesor       Int
-  id_ciclo          Int
-  id_presupuesto    Int
-  jornada_horas     Int                   @default(0) @db.SmallInt
-  jornada_fraccion  jornada_fraccion_tipo
-  id_plaza          Int?
-  ciclo             ciclo                 @relation(fields: [id_ciclo], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  presupuesto_plaza presupuesto_plaza?    @relation(fields: [id_plaza], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  presupuesto       presupuesto           @relation(fields: [id_presupuesto], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  profesor          profesor              @relation(fields: [id_profesor], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@id([id_profesor, id_ciclo, id_presupuesto])
-}
-
-model profesor {
-  id                                                   Int                   @id @default(autoincrement())
-  identificacion                                       String                @unique(map: "profesor_identificacion_unique") @db.VarChar(20)
-  nombre                                               String                @db.VarChar(20)
-  apellido1                                            String                @db.VarChar(15)
-  apellido2                                            String?               @db.VarChar(15)
-  telefonomovil                                        String?               @unique(map: "profesor_telefono_movil_unique") @db.VarChar(15)
-  telefonocasa                                         String?               @db.VarChar(15)
-  telefonooficina                                      String?               @db.VarChar(15)
-  email_institucional                                  String?               @unique(map: "profesor_email_institucional_unique") @db.VarChar(250)
-  email_personal                                       String?               @unique(map: "profesor_email_personal_unique") @db.VarChar(250)
-  oficina                                              String?               @db.VarChar(10)
-  casillero                                            String?               @db.VarChar(6)
-  fecha_nombramiento                                   DateTime?             @db.Date
-  estado                                               estado_enum           @default(Activo)
-  especialidad                                         String?               @db.VarChar(50)
-  titulo1                                              String?               @db.VarChar(100)
-  otro_trabajo                                         String?               @db.VarChar(50)
-  titulo2                                              String?               @db.VarChar(100)
-  otra_info                                            String?               @db.VarChar(200)
-  regimen_salarial                                     regimen_salarial_enum
-  admin_nombramiento                                   admin_nombramiento[]
-  curso_nombramiento                                   curso_nombramiento[]
-  prof_cobertura_prof_cobertura_id_becarioToprofesor   prof_cobertura[]      @relation("prof_cobertura_id_becarioToprofesor")
-  prof_cobertura_prof_cobertura_id_cubriendoToprofesor prof_cobertura[]      @relation("prof_cobertura_id_cubriendoToprofesor")
-  prof_jornada                                         prof_jornada[]
-  proy_nombramiento                                    proy_nombramiento[]
-  usuario                                              usuario?
-}
-
-model proy_centro {
-  id       Int         @id @default(autoincrement())
-  nombre   String      @unique(map: "proy_centro_nombre_unique") @db.VarChar(100)
-  estado   estado_enum @default(Activo)
-  proyecto proyecto[]
-}
-
-model proy_ciclo {
-  id                Int                 @id @default(autoincrement())
-  id_proyecto       Int
-  id_ciclo          Int
-  ciclo             ciclo               @relation(fields: [id_ciclo], references: [id], onUpdate: NoAction)
-  proyecto          proyecto            @relation(fields: [id_proyecto], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  proy_nombramiento proy_nombramiento[]
-
-  @@unique([id_proyecto, id_ciclo], map: "proy_ciclo_proyecto_ciclo_unique")
-}
-
-model proy_nombramiento {
-  id              Int         @id @default(autoincrement())
-  id_profesor     Int
-  id_puesto       Int
-  carga_horas     Int         @default(0) @db.SmallInt
-  ref_doc         String?     @db.VarChar(20)
-  vigencia_inicio DateTime    @db.Date
-  vigencia_fin    DateTime    @db.Date
-  id_proy_ciclo   Int
-  proy_puesto     proy_puesto @relation(fields: [id_puesto], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "proy_nombramiento_admin_puesto_fkey")
-  profesor        profesor    @relation(fields: [id_profesor], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  proy_ciclo      proy_ciclo  @relation(fields: [id_proy_ciclo], references: [id], onUpdate: NoAction)
-
-  @@unique([id_profesor, id_puesto, id_proy_ciclo], map: "proy_nombramiento_profesor_proy_ciclo_puesto_unique")
-}
-
-model proy_puesto {
-  id                Int                 @id @default(autoincrement())
-  id_tipo           Int
-  nombre            String              @db.VarChar(50)
-  estado            estado_enum         @default(Activo)
-  proy_nombramiento proy_nombramiento[]
-  proy_tipo         proy_tipo           @relation(fields: [id_tipo], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@unique([id_tipo, nombre], map: "proy_puesto_id_nombre_unique")
-}
-
-model proy_tipo {
-  id          Int           @id @default(autoincrement())
-  nombre      String        @unique(map: "proy_tipo_nombre_unique") @db.VarChar(50)
-  estado      estado_enum   @default(Activo)
-  proy_puesto proy_puesto[]
-  proyecto    proyecto[]
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model proyecto {
-  id              Int                  @id @default(autoincrement())
-  codigo          String?              @unique(map: "proyecto_codigo_unique") @db.VarChar(20)
-  id_tipo         Int?
-  id_centro       Int?
-  nombre          String               @db.VarChar(100)
-  descripcion     String?              @db.VarChar(100)
-  vigencia_inicio DateTime?            @db.Date
-  vigencia_fin    DateTime?            @db.Date
-  ref_doc         String?              @db.VarChar(20)
-  estado          estado_proyecto_enum @default(Activo)
-  proy_ciclo      proy_ciclo[]
-  proy_centro     proy_centro?         @relation(fields: [id_centro], references: [id], onDelete: Restrict)
-  proy_tipo       proy_tipo?           @relation(fields: [id_tipo], references: [id], onDelete: Restrict)
-}
-
 model usuario {
   id            Int             @id @default(autoincrement())
-  id_profesor   Int             @unique(map: "usuario_id_profesor_unique")
-  username      String          @unique(map: "usuario_username_unique") @db.VarChar(50)
-  password_hash String          @db.VarChar(255)
+  id_profesor   Int?
+  username      String          @unique @db.VarChar(50)
+  email         String?         @unique @db.VarChar(250)
+  nombre        String          @db.VarChar(100)
   activo        Boolean         @default(true)
-  profesor      profesor        @relation(fields: [id_profesor], references: [id])
   usuario_rol   usuario_rol[]
   vac_revision  vac_revision[]
   vac_solicitud vac_solicitud[]
@@ -341,20 +28,6 @@ model usuario_rol {
   @@id([id_usuario, rol])
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model vac_revision {
-  id             Int             @id @default(autoincrement())
-  id_solicitud   Int
-  id_usuario     Int
-  rol_revisor    vac_rol_enum
-  accion         vac_accion_enum
-  comentario     String?         @db.VarChar(500)
-  fecha_revision DateTime        @default(now()) @db.Timestamp(6)
-  vac_solicitud  vac_solicitud   @relation(fields: [id_solicitud], references: [id])
-  usuario        usuario         @relation(fields: [id_usuario], references: [id])
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model vac_solicitud {
   id                 Int             @id @default(autoincrement())
   id_usuario         Int
@@ -370,47 +43,23 @@ model vac_solicitud {
   usuario            usuario         @relation(fields: [id_usuario], references: [id])
 }
 
-enum dia_horario_enum {
-  L
-  K
-  M
-  J
-  V
-  S
+model vac_revision {
+  id             Int             @id @default(autoincrement())
+  id_solicitud   Int
+  id_usuario     Int
+  rol_revisor    vac_rol_enum
+  accion         vac_accion_enum
+  comentario     String?         @db.VarChar(500)
+  fecha_revision DateTime        @default(now()) @db.Timestamp(6)
+  vac_solicitud  vac_solicitud   @relation(fields: [id_solicitud], references: [id])
+  usuario        usuario         @relation(fields: [id_usuario], references: [id])
 }
 
-enum estado_enum {
-  Activo
-  Inactivo
-}
-
-enum estado_proyecto_enum {
-  Activo
-  Inactivo
-  Propuesta
-}
-
-enum jornada_fraccion_tipo {
-  CERO          @map("0")
-  UN_OCTAVO     @map("1/8")
-  UN_CUARTO     @map("1/4")
-  TRES_OCTAVOS  @map("3/8")
-  UN_MEDIO      @map("1/2")
-  CINCO_OCTAVOS @map("5/8")
-  TRES_CUARTOS  @map("3/4")
-  SIETE_OCTAVOS @map("7/8")
-  UNO           @map("1")
-}
-
-enum regimen_salarial_enum {
-  Salario_Compuesto @map("Salario Compuesto")
-  Salario_Global    @map("Salario Global")
-  NaN
-}
-
-enum vac_accion_enum {
-  Aprobado
-  Rechazado
+enum vac_rol_enum {
+  Profesor
+  Jefe_de_Departamento @map("Jefe de Departamento")
+  Jefe_Administrativo  @map("Jefe Administrativo")
+  Director_de_Escuela  @map("Director de Escuela")
 }
 
 enum vac_estado_enum {
@@ -420,9 +69,7 @@ enum vac_estado_enum {
   Rechazado
 }
 
-enum vac_rol_enum {
-  Profesor
-  Jefe_de_Departamento @map("Jefe de Departamento")
-  Jefe_Administrativo  @map("Jefe Administrativo")
-  Director_de_Escuela  @map("Director de Escuela")
+enum vac_accion_enum {
+  Aprobado
+  Rechazado
 }
