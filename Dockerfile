@@ -1,12 +1,10 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-# Upgrade npm to match local dev version (avoids lock file validation mismatches)
-RUN npm install -g npm@11
-
-# Install dependencies (cached layer)
-COPY vacation_system/package*.json ./
-RUN npm ci
+# Install dependencies (npm ci fails on cross-platform lock files; npm install resolves
+# linux-specific optional deps like @emnapi/runtime that macOS lock files omit)
+COPY vacation_system/package.json ./
+RUN npm install
 
 # Copy source (node_modules and .next excluded via .dockerignore)
 COPY vacation_system/ .
