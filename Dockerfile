@@ -1,6 +1,9 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
+# Upgrade npm to match local dev version (avoids lock file validation mismatches)
+RUN npm install -g npm@11
+
 # Install dependencies (cached layer)
 COPY vacation_system/package*.json ./
 RUN npm ci
