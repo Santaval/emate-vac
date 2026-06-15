@@ -3,20 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/apiFetch";
+import { calcularDiasHabiles } from "@/modules/vacation/services/calendarService";
 
 function countWeekdays(start: string, end: string): number {
   if (!start || !end) return 0;
   const s = new Date(start + "T00:00:00");
   const e = new Date(end + "T00:00:00");
-  if (e < s) return 0;
-  let count = 0;
-  const cur = new Date(s);
-  while (cur <= e) {
-    const d = cur.getDay();
-    if (d !== 0 && d !== 6) count++;
-    cur.setDate(cur.getDate() + 1);
-  }
-  return count;
+  return calcularDiasHabiles(s, e);
 }
 
 export default function NewRequestPage() {

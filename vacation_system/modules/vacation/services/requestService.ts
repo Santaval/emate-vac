@@ -10,6 +10,7 @@ import {
   CreateRequestValidationError,
   validateCreateRequestInput,
 } from "../validators/createRequestSchema";
+import { calcularDiasHabiles } from "./calendarService";
 import { findUserById } from "../repositories/userRoleRepository";
 import type { vac_rol_enum } from "@/app/generated/prisma/client";
 
@@ -18,22 +19,6 @@ export class RequestError extends Error {
     super(message);
     this.name = "RequestError";
   }
-}
-
-export function calcularDiasHabiles(inicio: Date, fin: Date): number {
-  if (fin < inicio) return 0;
-  let count = 0;
-  const current = new Date(inicio);
-  current.setHours(0, 0, 0, 0);
-  const end = new Date(fin);
-  end.setHours(0, 0, 0, 0);
-
-  while (current <= end) {
-    const day = current.getDay(); // 0=Sun, 6=Sat
-    if (day !== 0 && day !== 6) count++;
-    current.setDate(current.getDate() + 1);
-  }
-  return count;
 }
 
 export async function crearSolicitud(
