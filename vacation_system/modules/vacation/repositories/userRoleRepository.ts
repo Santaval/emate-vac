@@ -54,3 +54,10 @@ export async function setIdProfesor(id_usuario: number, id_profesor: number) {
     data: { id_profesor },
   });
 }
+
+export async function setVacationDays(id_usuario: number, dias_vacaciones_disponibles: number) {
+  return prisma.usuario.update({
+    where: { id: id_usuario },
+    data: { dias_vacaciones_disponibles },
+  });
+}

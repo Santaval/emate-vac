@@ -10,6 +10,7 @@ type Usuario = {
   nombre: string;
   email: string | null;
   activo: boolean;
+  dias_vacaciones_disponibles: number;
   usuario_rol: UsuarioRol[];
 };
 
@@ -68,6 +69,30 @@ export default function UsersPage() {
     setSaving(null);
   }
 
+  async function updateVacationDays(user: Usuario, value: string) {
+    const days = Number(value);
+    if (!Number.isInteger(days) || days < 0) return;
+
+    setSaving(user.id);
+    const res = await apiFetch("/api/vacation/users", {
+      method: "PATCH",
+      body: JSON.stringify({
+        id_usuario: user.id,
+        dias_vacaciones_disponibles: days,
+      }),
+    });
+    if (res.ok) {
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === user.id
+            ? { ...u, dias_vacaciones_disponibles: days }
+            : u
+        )
+      );
+    }
+    setSaving(null);
+  }
+
   if (loading) return <p className="text-sm text-muted-foreground">Cargando…</p>;
   if (error) return (
     <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-4 py-3">
@@ -94,6 +119,7 @@ export default function UsersPage() {
             <thead>
               <tr className="hover:bg-transparent bg-table-header border-b border-table-row-border">
                 <th className="font-semibold text-base h-10 px-3 text-left">Usuario</th>
+                <th className="font-semibold text-base h-10 px-3 text-center">Días disponibles</th>
                 {ALL_ROLES.map((r) => (
                   <th key={r} className="font-semibold text-base h-10 px-3 text-center">
                     {ROL_LABEL[r]}
@@ -112,6 +138,16 @@ export default function UsersPage() {
                   <td className="py-2 px-3 text-sm">
                     <p className="font-medium text-foreground">{u.nombre}</p>
                     <p className="text-muted-foreground text-xs">{u.username}</p>
+                  </td>
+                  <td className="py-2 px-3 text-sm text-center">
+                    <input
+                      type="number"
+                      min="0"
+                      value={u.dias_vacaciones_disponibles}
+                      onChange={(e) => updateVacationDays(u, e.target.value)}
+                      disabled={saving === u.id}
+                      className="w-20 rounded-md border border-border bg-background px-2 py-1 text-center text-sm text-foreground"
+                    />
                   </td>
                   {ALL_ROLES.map((rol) => (
                     <td key={rol} className="py-2 px-3 text-sm text-center">

@@ -32,8 +32,8 @@ export async function aprobar(
 
   const esUltimoPaso = solicitud.paso_actual === TOTAL_PASOS;
 
-  await prisma.$transaction([
-    prisma.vac_revision.create({
+  await prisma.$transaction(async (tx) => {
+    await tx.vac_revision.create({
       data: {
         id_solicitud,
         id_usuario: id_usuario_revisor,
@@ -41,16 +41,35 @@ export async function aprobar(
         accion: "Aprobado",
         comentario: comentario ?? null,
       },
-    }),
-    prisma.vac_solicitud.update({
+    });
+
+    await tx.vac_solicitud.update({
       where: { id: id_solicitud },
       data: {
         estado: esUltimoPaso ? "Aprobado" : "Enviado",
         paso_actual: esUltimoPaso ? null : (solicitud.paso_actual! + 1),
         fecha_modificacion: new Date(),
       },
-    }),
-  ]);
+    });
+
+    if (esUltimoPaso) {
+      const updated = await tx.usuario.updateMany({
+        where: {
+          id: solicitud.id_usuario,
+          dias_vacaciones_disponibles: { gte: solicitud.dias_habiles },
+        },
+        data: {
+          dias_vacaciones_disponibles: {
+            decrement: solicitud.dias_habiles,
+          },
+        },
+      });
+
+      if (updated.count === 0) {
+        throw new ReviewError("El solicitante no tiene suficientes días disponibles");
+      }
+    }
+  });
 
   return { aprobadoFinal: esUltimoPaso };
 }

@@ -6,6 +6,7 @@ import {
   listUsers,
   setUserRoles,
   setIdProfesor,
+  setVacationDays,
 } from "@/modules/vacation/repositories/userRoleRepository";
 import type { vac_rol_enum } from "@/app/generated/prisma/client";
 
@@ -49,6 +50,13 @@ export async function PATCH(request: Request) {
     }
     if (body.id_profesor !== undefined) {
       await setIdProfesor(Number(body.id_usuario), Number(body.id_profesor));
+    }
+    if (body.dias_vacaciones_disponibles !== undefined) {
+      const days = Number(body.dias_vacaciones_disponibles);
+      if (!Number.isInteger(days) || days < 0) {
+        return Response.json({ error: "dias_vacaciones_disponibles inválido" }, { status: 400 });
+      }
+      await setVacationDays(Number(body.id_usuario), days);
     }
 
     return Response.json({ ok: true });

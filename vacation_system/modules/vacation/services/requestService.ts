@@ -10,6 +10,7 @@ import {
   CreateRequestValidationError,
   validateCreateRequestInput,
 } from "../validators/createRequestSchema";
+import { findUserById } from "../repositories/userRoleRepository";
 import type { vac_rol_enum } from "@/app/generated/prisma/client";
 
 export class RequestError extends Error {
@@ -54,6 +55,12 @@ export async function crearSolicitud(
   const dias_habiles = calcularDiasHabiles(fecha_inicio, fecha_fin);
   if (dias_habiles === 0) {
     throw new RequestError("El rango seleccionado no contiene días hábiles");
+  }
+
+  const user = await findUserById(id_usuario);
+  if (!user) throw new RequestError("Usuario no encontrado", 404);
+  if (dias_habiles > user.dias_vacaciones_disponibles) {
+    throw new RequestError("La solicitud supera los días de vacaciones disponibles");
   }
 
   const overlaps = await hasOverlappingRequest(id_usuario, fecha_inicio, fecha_fin);
