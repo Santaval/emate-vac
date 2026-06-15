@@ -28,6 +28,24 @@ export async function createRequest(
   });
 }
 
+export async function hasOverlappingRequest(
+  id_usuario: number,
+  fecha_inicio: Date,
+  fecha_fin: Date
+) {
+  const existing = await prisma.vac_solicitud.findFirst({
+    where: {
+      id_usuario,
+      estado: { in: ["Borrador", "Enviado", "Aprobado"] },
+      fecha_inicio: { lte: fecha_fin },
+      fecha_fin: { gte: fecha_inicio },
+    },
+    select: { id: true },
+  });
+
+  return existing !== null;
+}
+
 export async function submitRequest(id: number) {
   return prisma.vac_solicitud.update({
     where: { id },

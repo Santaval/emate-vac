@@ -4,7 +4,12 @@ import {
   getById,
   listByUser,
   listPendingForRole,
+  hasOverlappingRequest,
 } from "../repositories/requestRepository";
+import {
+  CreateRequestValidationError,
+  validateCreateRequestInput,
+} from "../validators/createRequestSchema";
 import type { vac_rol_enum } from "@/app/generated/prisma/client";
 
 export class RequestError extends Error {
@@ -32,32 +37,35 @@ export function calcularDiasHabiles(inicio: Date, fin: Date): number {
 
 export async function crearSolicitud(
   id_usuario: number,
-  input: {
-    fecha_inicio: string;
-    fecha_fin: string;
-    observacion?: string;
-  }
+  input: unknown
 ) {
-  const fecha_inicio = new Date(input.fecha_inicio);
-  const fecha_fin = new Date(input.fecha_fin);
+  let validatedInput: ReturnType<typeof validateCreateRequestInput>;
+  try {
+    validatedInput = validateCreateRequestInput(input);
+  } catch (e) {
+    if (e instanceof CreateRequestValidationError) {
+      throw new RequestError(e.message);
+    }
+    throw e;
+  }
 
-  if (isNaN(fecha_inicio.getTime()) || isNaN(fecha_fin.getTime())) {
-    throw new RequestError("Fechas inválidas");
-  }
-  if (fecha_fin < fecha_inicio) {
-    throw new RequestError("La fecha de fin debe ser igual o posterior a la fecha de inicio");
-  }
+  const { fecha_inicio, fecha_fin, observacion } = validatedInput;
 
   const dias_habiles = calcularDiasHabiles(fecha_inicio, fecha_fin);
   if (dias_habiles === 0) {
     throw new RequestError("El rango seleccionado no contiene días hábiles");
   }
 
+  const overlaps = await hasOverlappingRequest(id_usuario, fecha_inicio, fecha_fin);
+  if (overlaps) {
+    throw new RequestError("Ya existe una solicitud para ese rango de fechas");
+  }
+
   return createRequest(id_usuario, {
     fecha_inicio,
     fecha_fin,
     dias_habiles,
-    observacion: input.observacion,
+    observacion,
   });
 }
 
