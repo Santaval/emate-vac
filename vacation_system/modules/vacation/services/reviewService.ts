@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { getById, updateStatus } from "../repositories/requestRepository";
+import { getById } from "../repositories/requestRepository";
 import { PASO_ROL, TOTAL_PASOS } from "../types/userRole";
 import type { vac_rol_enum } from "@/app/generated/prisma/client";
 

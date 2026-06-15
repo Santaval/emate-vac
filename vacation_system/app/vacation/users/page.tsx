@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/apiFetch";
+import { getApiErrorMessage, getDefaultApiErrorMessage } from "@/lib/apiError";
 
 type UsuarioRol = { rol: string };
 type Usuario = {
@@ -37,12 +38,13 @@ export default function UsersPage() {
   useEffect(() => {
     apiFetch("/api/vacation/users")
       .then(async (r) => {
-        if (r.status === 403) {
-          setError("Acceso denegado. Solo el Jefe Administrativo puede ver esta sección.");
+        if (!r.ok) {
+          setError(await getApiErrorMessage(r, getDefaultApiErrorMessage(r.status)));
           return;
         }
         setUsers(await r.json());
       })
+      .catch(() => setError("No se pudo cargar la gestión de usuarios."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -65,6 +67,8 @@ export default function UsersPage() {
             : u
         )
       );
+    } else {
+      setError(await getApiErrorMessage(res, getDefaultApiErrorMessage(res.status)));
     }
     setSaving(null);
   }
@@ -89,6 +93,8 @@ export default function UsersPage() {
             : u
         )
       );
+    } else {
+      setError(await getApiErrorMessage(res, getDefaultApiErrorMessage(res.status)));
     }
     setSaving(null);
   }

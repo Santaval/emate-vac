@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/apiFetch";
+import { getApiErrorMessage, getDefaultApiErrorMessage } from "@/lib/apiError";
 import { calcularDiasHabiles } from "@/modules/vacation/services/calendarService";
 
 function countWeekdays(start: string, end: string): number {
@@ -33,8 +34,11 @@ export default function NewRequestPage() {
           observacion: form.observacion || undefined,
         }),
       });
+      if (!res.ok) {
+        setError(await getApiErrorMessage(res, getDefaultApiErrorMessage(res.status)));
+        return;
+      }
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Error al crear la solicitud"); return; }
 
       if (action === "submit") {
         const submitRes = await apiFetch(`/api/vacation/requests/${data.id}`, {
@@ -42,8 +46,7 @@ export default function NewRequestPage() {
           body: JSON.stringify({ action: "submit" }),
         });
         if (!submitRes.ok) {
-          const d = await submitRes.json();
-          setError(d.error ?? "Error al enviar la solicitud");
+          setError(await getApiErrorMessage(submitRes, getDefaultApiErrorMessage(submitRes.status)));
           return;
         }
       }
