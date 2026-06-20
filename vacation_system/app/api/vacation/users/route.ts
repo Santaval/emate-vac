@@ -1,8 +1,7 @@
-import { withAuth, unauthorizedResponse, forbiddenResponse } from "@/lib/withAuth";
+import { unauthorizedResponse, forbiddenResponse } from "@/lib/withAuth";
 import { AuthError } from "@/lib/withAuth";
+import { authenticate } from "@/modules/vacation/auth/authenticate";
 import {
-  findOrCreateUser,
-  findUserRoles,
   listUsers,
   setUserRoles,
   setIdProfesor,
@@ -12,13 +11,7 @@ import type { vac_rol_enum } from "@/app/generated/prisma/client";
 
 export async function GET(request: Request) {
   try {
-    const claims = await withAuth(request);
-    const user = await findOrCreateUser({
-      username: claims.preferred_username ?? claims.sub,
-      email: claims.email,
-      nombre: claims.name ?? claims.preferred_username ?? claims.sub,
-    });
-    const roles = await findUserRoles(user.id);
+    const { roles } = await authenticate(request);
     if (!roles.includes("Jefe_Administrativo")) return forbiddenResponse();
 
     const users = await listUsers();
@@ -31,13 +24,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const claims = await withAuth(request);
-    const user = await findOrCreateUser({
-      username: claims.preferred_username ?? claims.sub,
-      email: claims.email,
-      nombre: claims.name ?? claims.preferred_username ?? claims.sub,
-    });
-    const roles = await findUserRoles(user.id);
+    const { roles } = await authenticate(request);
     if (!roles.includes("Jefe_Administrativo")) return forbiddenResponse();
 
     const body = await request.json();

@@ -8,6 +8,8 @@ export interface VacationTokenPayload extends JWTPayload {
   name?: string;
   given_name?: string;
   family_name?: string;
+  // Keycloak client-scoped roles, e.g. resource_access["sac-mate"].roles
+  resource_access?: Record<string, { roles?: string[] }>;
 }
 
 const bypassAuth = process.env.BYPASS_AUTH === "true";

@@ -1,6 +1,6 @@
-import { withAuth, unauthorizedResponse, forbiddenResponse } from "@/lib/withAuth";
+import { unauthorizedResponse, forbiddenResponse } from "@/lib/withAuth";
 import { AuthError } from "@/lib/withAuth";
-import { findOrCreateUser } from "@/modules/vacation/repositories/userRoleRepository";
+import { authenticate } from "@/modules/vacation/auth/authenticate";
 import {
   obtenerSolicitud,
   enviarSolicitud,
@@ -11,12 +11,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(request: Request, { params }: RouteContext) {
   try {
-    const claims = await withAuth(request);
-    await findOrCreateUser({
-      username: claims.preferred_username ?? claims.sub,
-      email: claims.email,
-      nombre: claims.name ?? claims.preferred_username ?? claims.sub,
-    });
+    await authenticate(request);
 
     const { id } = await params;
     const solicitud = await obtenerSolicitud(Number(id));
@@ -32,12 +27,7 @@ export async function GET(request: Request, { params }: RouteContext) {
 
 export async function PATCH(request: Request, { params }: RouteContext) {
   try {
-    const claims = await withAuth(request);
-    const user = await findOrCreateUser({
-      username: claims.preferred_username ?? claims.sub,
-      email: claims.email,
-      nombre: claims.name ?? claims.preferred_username ?? claims.sub,
-    });
+    const { user } = await authenticate(request);
 
     const { id } = await params;
     const body = await request.json();
