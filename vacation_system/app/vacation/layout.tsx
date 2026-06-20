@@ -1,12 +1,19 @@
 "use client";
 
-import { useAuth } from "@/lib/useAuth";
+import { getToken, useAuth } from "@/lib/useAuth";
 import VacSidebar from "@/components/VacSidebar";
+import DevLoginForm from "@/components/DevLoginForm";
 
 export default function VacationLayout({ children }: { children: React.ReactNode }) {
   const { ready, roles } = useAuth();
 
   if (!ready) {
+    // In standalone dev there is no parent iframe to inject a token, so show a
+    // local login form instead of waiting forever for a SAC_AUTH message.
+    if (process.env.NODE_ENV === "development" && !getToken()) {
+      return <DevLoginForm />;
+    }
+
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <p className="text-muted-foreground text-sm">Conectando con el sistema…</p>
