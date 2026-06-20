@@ -14,6 +14,10 @@ function setToken(token: string) {
   sessionStorage.setItem(TOKEN_KEY, token);
 }
 
+export function clearToken(): void {
+  sessionStorage.removeItem(TOKEN_KEY);
+}
+
 function applyTheme(theme: string) {
   document.documentElement.classList.toggle("dark", theme === "dark");
   sessionStorage.setItem(THEME_KEY, theme);

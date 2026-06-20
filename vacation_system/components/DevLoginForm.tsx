@@ -11,14 +11,22 @@ const ROLE_OPTIONS: { value: string; label: string }[] = [
   { value: "Director_de_Escuela", label: "Director de Escuela" },
 ];
 
-export default function DevLoginForm() {
-  const [username, setUsername] = useState("dev.user");
-  const [roles, setRoles] = useState<string[]>([
-    "Profesor",
-    "Jefe_de_Departamento",
-    "Jefe_Administrativo",
-    "Director_de_Escuela",
-  ]);
+interface Props {
+  onCancel?: () => void;
+  initialUsername?: string;
+  initialRoles?: string[];
+}
+
+export default function DevLoginForm({ onCancel, initialUsername, initialRoles }: Props) {
+  const [username, setUsername] = useState(initialUsername ?? "dev.user");
+  const [roles, setRoles] = useState<string[]>(
+    initialRoles ?? [
+      "Profesor",
+      "Jefe_de_Departamento",
+      "Jefe_Administrativo",
+      "Director_de_Escuela",
+    ]
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -51,54 +59,71 @@ export default function DevLoginForm() {
     }
   }
 
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-sm bg-card rounded-lg border border-border p-6 shadow-sm space-y-5"
-      >
-        <div>
-          <h1 className="text-lg font-semibold text-foreground">Dev login</h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            Solo en desarrollo. Crea/actualiza el usuario y genera un token de bypass.
-          </p>
-        </div>
+  const card = (
+    <form
+      onSubmit={handleSubmit}
+      className="w-full max-w-sm bg-card rounded-lg border border-border p-6 shadow-sm space-y-5"
+    >
+      <div>
+        <h1 className="text-lg font-semibold text-foreground">Dev login</h1>
+        <p className="text-xs text-muted-foreground mt-1">
+          Solo en desarrollo. Crea/actualiza el usuario y genera un token de bypass.
+        </p>
+      </div>
 
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium text-foreground">Usuario</span>
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </label>
+      <label className="block space-y-1.5">
+        <span className="text-sm font-medium text-foreground">Usuario</span>
+        <input
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+      </label>
 
-        <fieldset className="space-y-2">
-          <legend className="text-sm font-medium text-foreground">Roles</legend>
-          {ROLE_OPTIONS.map((opt) => (
-            <label key={opt.value} className="flex items-center gap-2 text-sm text-foreground">
-              <input
-                type="checkbox"
-                checked={roles.includes(opt.value)}
-                onChange={() => toggleRole(opt.value)}
-                className="h-4 w-4 rounded border-border"
-              />
-              {opt.label}
-            </label>
-          ))}
-        </fieldset>
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium text-foreground">Roles</legend>
+        {ROLE_OPTIONS.map((opt) => (
+          <label key={opt.value} className="flex items-center gap-2 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={roles.includes(opt.value)}
+              onChange={() => toggleRole(opt.value)}
+              className="h-4 w-4 rounded border-border"
+            />
+            {opt.label}
+          </label>
+        ))}
+      </fieldset>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
+      <div className="flex gap-2">
         <button
           type="submit"
           disabled={loading || !username.trim()}
-          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-sm px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50"
+          className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground text-sm px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50"
         >
           {loading ? "Entrando…" : "Entrar"}
         </button>
-      </form>
-    </div>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={loading}
+            className="px-4 py-2 rounded-md border border-border text-sm font-medium text-foreground hover:bg-sidebar-accent transition-colors disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+        )}
+      </div>
+    </form>
   );
+
+  // Full-page bootstrap mode (no onCancel): center on its own screen.
+  // Overlay mode (onCancel provided): the caller already provides positioning/backdrop.
+  if (!onCancel) {
+    return <div className="flex items-center justify-center min-h-screen bg-background">{card}</div>;
+  }
+  return card;
 }
