@@ -12,6 +12,7 @@ import {
 } from "../validators/createRequestSchema";
 import { calcularDiasHabiles } from "./calendarService";
 import { findUserById } from "../repositories/userRoleRepository";
+import { REVIEWER_ROLES } from "../types/userRole";
 import type { vac_rol_enum } from "@/app/generated/prisma/client";
 
 export class RequestError extends Error {
@@ -79,8 +80,16 @@ export async function obtenerPendientesParaRol(rol: vac_rol_enum) {
   return listPendingForRole(rol);
 }
 
-export async function obtenerSolicitud(id: number) {
+export async function obtenerSolicitud(
+  id: number,
+  id_usuario: number,
+  roles: vac_rol_enum[]
+) {
   const solicitud = await getById(id);
   if (!solicitud) throw new RequestError("Solicitud no encontrada", 404);
+  const esRevisor = roles.some((r) => REVIEWER_ROLES.includes(r));
+  if (solicitud.id_usuario !== id_usuario && !esRevisor) {
+    throw new RequestError("Acceso denegado", 403);
+  }
   return solicitud;
 }
