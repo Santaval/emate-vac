@@ -11,7 +11,10 @@ const USUARIO_SELECT = {
 
 const CON_USUARIO_Y_REVISIONES = {
   usuario: { select: USUARIO_SELECT },
-  vac_revision: { orderBy: { fecha_revision: "asc" as const } },
+  vac_revision: {
+    include: { usuario: { select: USUARIO_SELECT } },
+    orderBy: { fecha_revision: "asc" as const },
+  },
 } as const;
 
 export async function createRequest(
