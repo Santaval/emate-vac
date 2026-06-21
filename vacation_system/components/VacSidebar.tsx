@@ -8,6 +8,7 @@ import { useState } from "react";
 const NAV_ITEMS = [
   { href: "/vacation", label: "Inicio", exact: true },
   { href: "/vacation/requests", label: "Solicitudes", exact: false },
+  { href: "/vacation/pending", label: "Pendientes", exact: false, reviewerOnly: true },
   { href: "/vacation/history", label: "Historial", exact: false },
   { href: "/vacation/users", label: "Usuarios", exact: false, adminOnly: true },
 ];
@@ -20,8 +21,16 @@ export default function VacSidebar({ roles }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(true);
   const isAdmin = roles.includes("Jefe_Administrativo");
+  const isReviewer =
+    roles.includes("Jefe_de_Departamento") ||
+    roles.includes("Director_de_Escuela") ||
+    roles.includes("Jefe_Administrativo");
 
-  const visibleItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
+    if (item.reviewerOnly && !isReviewer) return false;
+    return true;
+  });
 
   if (!open) {
     return (

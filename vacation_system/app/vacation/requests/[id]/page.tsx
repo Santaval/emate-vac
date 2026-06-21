@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/apiFetch";
+import { getApiErrorMessage, getDefaultApiErrorMessage } from "@/lib/apiError";
 import Link from "next/link";
 
 type Revision = {
@@ -50,12 +51,19 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   const [loading, setLoading] = useState(true);
   const [comentario, setComentario] = useState("");
   const [actionError, setActionError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [acting, setActing] = useState(false);
 
   useEffect(() => {
     apiFetch(`/api/vacation/requests/${id}`)
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) {
+          throw new Error(await getApiErrorMessage(r, getDefaultApiErrorMessage(r.status)));
+        }
+        return r.json();
+      })
       .then(setSolicitud)
+      .catch((e) => setLoadError(e instanceof Error ? e.message : "No se pudo cargar la solicitud."))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -71,9 +79,8 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
       method: "POST",
       body: JSON.stringify({ id_solicitud: Number(id), comentario: comentario || undefined }),
     });
-    const data = await res.json();
     if (!res.ok) {
-      setActionError(data.error ?? "Error al procesar");
+      setActionError(await getApiErrorMessage(res, getDefaultApiErrorMessage(res.status)));
       setActing(false);
       return;
     }
@@ -88,13 +95,13 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     });
     if (res.ok) router.push("/vacation/requests");
     else {
-      const d = await res.json();
-      setActionError(d.error ?? "Error al enviar");
+      setActionError(await getApiErrorMessage(res, getDefaultApiErrorMessage(res.status)));
       setActing(false);
     }
   }
 
   if (loading) return <p className="text-sm text-muted-foreground p-4">Cargando…</p>;
+  if (loadError) return <p className="text-sm text-red-600 p-4">{loadError}</p>;
   if (!solicitud) return <p className="text-sm text-red-600 p-4">Solicitud no encontrada.</p>;
 
   const s = solicitud;

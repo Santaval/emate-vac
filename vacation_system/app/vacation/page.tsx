@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/apiFetch";
+import { getApiErrorMessage, getDefaultApiErrorMessage } from "@/lib/apiError";
 import Link from "next/link";
 
 type Solicitud = {
@@ -22,11 +23,18 @@ const ESTADO_COLOR: Record<string, string> = {
 export default function VacationDashboard() {
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     apiFetch("/api/vacation/requests")
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) {
+          throw new Error(await getApiErrorMessage(r, getDefaultApiErrorMessage(r.status)));
+        }
+        return r.json();
+      })
       .then(setSolicitudes)
+      .catch((e) => setError(e instanceof Error ? e.message : "No se pudieron cargar las solicitudes."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -64,6 +72,8 @@ export default function VacationDashboard() {
         </div>
         {loading ? (
           <p className="px-4 py-6 text-sm text-muted-foreground">Cargando…</p>
+        ) : error ? (
+          <p className="px-4 py-6 text-sm text-red-600">{error}</p>
         ) : solicitudes.length === 0 ? (
           <p className="px-4 py-6 text-sm text-muted-foreground">No hay solicitudes aún.</p>
         ) : (

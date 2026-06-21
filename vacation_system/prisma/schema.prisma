@@ -1,7 +1,6 @@
 generator client {
-  provider        = "prisma-client"
-  output          = "../app/generated/prisma"
-
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
 }
 
 datasource db {
@@ -9,15 +8,16 @@ datasource db {
 }
 
 model usuario {
-  id            Int             @id @default(autoincrement())
-  id_profesor   Int?
-  username      String          @unique @db.VarChar(50)
-  email         String?         @unique @db.VarChar(250)
-  nombre        String          @db.VarChar(100)
-  activo        Boolean         @default(true)
-  usuario_rol   usuario_rol[]
-  vac_revision  vac_revision[]
-  vac_solicitud vac_solicitud[]
+  id                          Int             @id @default(autoincrement())
+  id_profesor                 Int?
+  username                    String          @unique @db.VarChar(50)
+  email                       String?         @unique @db.VarChar(250)
+  nombre                      String          @db.VarChar(100)
+  activo                      Boolean         @default(true)
+  dias_vacaciones_disponibles Int             @default(0) @db.SmallInt
+  usuario_rol                 usuario_rol[]
+  vac_revision                vac_revision[]
+  vac_solicitud               vac_solicitud[]
 }
 
 model usuario_rol {

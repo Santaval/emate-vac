@@ -3,20 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/apiFetch";
+import { getApiErrorMessage, getDefaultApiErrorMessage } from "@/lib/apiError";
+import { calcularDiasHabiles } from "@/modules/vacation/services/calendarService";
 
 function countWeekdays(start: string, end: string): number {
   if (!start || !end) return 0;
   const s = new Date(start + "T00:00:00");
   const e = new Date(end + "T00:00:00");
-  if (e < s) return 0;
-  let count = 0;
-  const cur = new Date(s);
-  while (cur <= e) {
-    const d = cur.getDay();
-    if (d !== 0 && d !== 6) count++;
-    cur.setDate(cur.getDate() + 1);
-  }
-  return count;
+  return calcularDiasHabiles(s, e);
 }
 
 export default function NewRequestPage() {
@@ -40,8 +34,11 @@ export default function NewRequestPage() {
           observacion: form.observacion || undefined,
         }),
       });
+      if (!res.ok) {
+        setError(await getApiErrorMessage(res, getDefaultApiErrorMessage(res.status)));
+        return;
+      }
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Error al crear la solicitud"); return; }
 
       if (action === "submit") {
         const submitRes = await apiFetch(`/api/vacation/requests/${data.id}`, {
@@ -49,8 +46,7 @@ export default function NewRequestPage() {
           body: JSON.stringify({ action: "submit" }),
         });
         if (!submitRes.ok) {
-          const d = await submitRes.json();
-          setError(d.error ?? "Error al enviar la solicitud");
+          setError(await getApiErrorMessage(submitRes, getDefaultApiErrorMessage(submitRes.status)));
           return;
         }
       }

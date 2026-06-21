@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/apiFetch";
+import { getApiErrorMessage, getDefaultApiErrorMessage } from "@/lib/apiError";
 import Link from "next/link";
 
 type Solicitud = {
@@ -26,17 +27,50 @@ export default function HistoryPage() {
   const [items, setItems] = useState<Solicitud[]>([]);
   const [loading, setLoading] = useState(true);
   const [estado, setEstado] = useState("");
+  const [error, setError] = useState("");
 
-  function load(filter: string) {
+  async function load(filter: string) {
     setLoading(true);
+    setError("");
     const qs = filter ? `?estado=${filter}` : "";
-    apiFetch(`/api/vacation/history${qs}`)
-      .then((r) => r.json())
-      .then(setItems)
-      .finally(() => setLoading(false));
+    try {
+      const response = await apiFetch(`/api/vacation/history${qs}`);
+      if (!response.ok) {
+        throw new Error(await getApiErrorMessage(response, getDefaultApiErrorMessage(response.status)));
+      }
+      setItems(await response.json());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo cargar el historial.");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  useEffect(() => { load(""); }, []);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadInitial() {
+      try {
+        const response = await apiFetch("/api/vacation/history");
+        if (!response.ok) {
+          throw new Error(await getApiErrorMessage(response, getDefaultApiErrorMessage(response.status)));
+        }
+        if (!cancelled) setItems(await response.json());
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "No se pudo cargar el historial.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void loadInitial();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -61,6 +95,8 @@ export default function HistoryPage() {
       <div className="table-container">
         {loading ? (
           <p className="px-4 py-6 text-sm text-muted-foreground">Cargando…</p>
+        ) : error ? (
+          <p className="px-4 py-6 text-sm text-red-600">{error}</p>
         ) : items.length === 0 ? (
           <p className="px-4 py-6 text-sm text-muted-foreground">No hay registros.</p>
         ) : (

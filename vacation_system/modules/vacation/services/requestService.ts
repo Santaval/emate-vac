@@ -4,7 +4,14 @@ import {
   getById,
   listByUser,
   listPendingForRole,
+  hasOverlappingRequest,
 } from "../repositories/requestRepository";
+import {
+  CreateRequestValidationError,
+  validateCreateRequestInput,
+} from "../validators/createRequestSchema";
+import { calcularDiasHabiles } from "./calendarService";
+import { findUserById } from "../repositories/userRoleRepository";
 import type { vac_rol_enum } from "@/app/generated/prisma/client";
 
 export class RequestError extends Error {
@@ -14,50 +21,43 @@ export class RequestError extends Error {
   }
 }
 
-export function calcularDiasHabiles(inicio: Date, fin: Date): number {
-  if (fin < inicio) return 0;
-  let count = 0;
-  const current = new Date(inicio);
-  current.setHours(0, 0, 0, 0);
-  const end = new Date(fin);
-  end.setHours(0, 0, 0, 0);
-
-  while (current <= end) {
-    const day = current.getDay(); // 0=Sun, 6=Sat
-    if (day !== 0 && day !== 6) count++;
-    current.setDate(current.getDate() + 1);
-  }
-  return count;
-}
-
 export async function crearSolicitud(
   id_usuario: number,
-  input: {
-    fecha_inicio: string;
-    fecha_fin: string;
-    observacion?: string;
-  }
+  input: unknown
 ) {
-  const fecha_inicio = new Date(input.fecha_inicio);
-  const fecha_fin = new Date(input.fecha_fin);
+  let validatedInput: ReturnType<typeof validateCreateRequestInput>;
+  try {
+    validatedInput = validateCreateRequestInput(input);
+  } catch (e) {
+    if (e instanceof CreateRequestValidationError) {
+      throw new RequestError(e.message);
+    }
+    throw e;
+  }
 
-  if (isNaN(fecha_inicio.getTime()) || isNaN(fecha_fin.getTime())) {
-    throw new RequestError("Fechas inválidas");
-  }
-  if (fecha_fin < fecha_inicio) {
-    throw new RequestError("La fecha de fin debe ser igual o posterior a la fecha de inicio");
-  }
+  const { fecha_inicio, fecha_fin, observacion } = validatedInput;
 
   const dias_habiles = calcularDiasHabiles(fecha_inicio, fecha_fin);
   if (dias_habiles === 0) {
     throw new RequestError("El rango seleccionado no contiene días hábiles");
   }
 
+  const user = await findUserById(id_usuario);
+  if (!user) throw new RequestError("Usuario no encontrado", 404);
+  if (dias_habiles > user.dias_vacaciones_disponibles) {
+    throw new RequestError("La solicitud supera los días de vacaciones disponibles");
+  }
+
+  const overlaps = await hasOverlappingRequest(id_usuario, fecha_inicio, fecha_fin);
+  if (overlaps) {
+    throw new RequestError("Ya existe una solicitud para ese rango de fechas");
+  }
+
   return createRequest(id_usuario, {
     fecha_inicio,
     fecha_fin,
     dias_habiles,
-    observacion: input.observacion,
+    observacion,
   });
 }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/apiFetch";
+import { getApiErrorMessage, getDefaultApiErrorMessage } from "@/lib/apiError";
 import Link from "next/link";
 
 type Solicitud = {
@@ -21,16 +22,51 @@ const ESTADO_COLOR: Record<string, string> = {
   Rechazado: "bg-red-100 text-red-700",
 };
 
+const ESTADOS = ["", "Borrador", "Enviado", "Aprobado", "Rechazado"] as const;
+
+const PASO_LABEL: Record<number, string> = {
+  1: "Jefe de Departamento",
+  2: "Director de Escuela",
+  3: "Jefe Administrativo",
+};
+
 export default function RequestsPage() {
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [estado, setEstado] = useState("");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
+  const [pasoActual, setPasoActual] = useState("");
 
   useEffect(() => {
     apiFetch("/api/vacation/requests")
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) {
+          throw new Error(await getApiErrorMessage(r, getDefaultApiErrorMessage(r.status)));
+        }
+        return r.json();
+      })
       .then(setSolicitudes)
+      .catch((e) => setError(e instanceof Error ? e.message : "No se pudieron cargar las solicitudes."))
       .finally(() => setLoading(false));
   }, []);
+
+  const filteredSolicitudes = solicitudes.filter((s) => {
+    const normalizedSearch = search.trim().toLowerCase();
+    const matchesSearch =
+      !normalizedSearch ||
+      s.usuario.nombre.toLowerCase().includes(normalizedSearch) ||
+      (s.usuario.email?.toLowerCase().includes(normalizedSearch) ?? false);
+    const matchesEstado = !estado || s.estado === estado;
+    const matchesPaso = !pasoActual || String(s.paso_actual ?? "") === pasoActual;
+    const start = s.fecha_inicio.slice(0, 10);
+    const matchesFechaDesde = !fechaDesde || start >= fechaDesde;
+    const matchesFechaHasta = !fechaHasta || start <= fechaHasta;
+
+    return matchesSearch && matchesEstado && matchesPaso && matchesFechaDesde && matchesFechaHasta;
+  });
 
   return (
     <div className="space-y-6">
@@ -44,11 +80,74 @@ export default function RequestsPage() {
         </Link>
       </div>
 
+      <div className="grid gap-3 rounded-lg border border-border bg-card p-4 shadow-sm md:grid-cols-5">
+        <label className="md:col-span-2">
+          <span className="text-xs font-medium text-muted-foreground">Buscar</span>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Nombre o correo"
+            className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </label>
+        <label>
+          <span className="text-xs font-medium text-muted-foreground">Estado</span>
+          <select
+            value={estado}
+            onChange={(e) => setEstado(e.target.value)}
+            className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            {ESTADOS.map((value) => (
+              <option key={value} value={value}>
+                {value || "Todos"}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span className="text-xs font-medium text-muted-foreground">Desde</span>
+          <input
+            type="date"
+            value={fechaDesde}
+            onChange={(e) => setFechaDesde(e.target.value)}
+            className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </label>
+        <label>
+          <span className="text-xs font-medium text-muted-foreground">Hasta</span>
+          <input
+            type="date"
+            value={fechaHasta}
+            onChange={(e) => setFechaHasta(e.target.value)}
+            className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </label>
+        <label className="md:col-span-2">
+          <span className="text-xs font-medium text-muted-foreground">Paso actual</span>
+          <select
+            value={pasoActual}
+            onChange={(e) => setPasoActual(e.target.value)}
+            className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="">Todos</option>
+            {Object.entries(PASO_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
       <div className="table-container">
         {loading ? (
           <p className="px-4 py-6 text-sm text-muted-foreground">Cargando…</p>
+        ) : error ? (
+          <p className="px-4 py-6 text-sm text-red-600">{error}</p>
         ) : solicitudes.length === 0 ? (
           <p className="px-4 py-6 text-sm text-muted-foreground">No hay solicitudes.</p>
+        ) : filteredSolicitudes.length === 0 ? (
+          <p className="px-4 py-6 text-sm text-muted-foreground">No hay solicitudes que coincidan con los filtros.</p>
         ) : (
           <table className="w-full">
             <thead>
@@ -57,11 +156,12 @@ export default function RequestsPage() {
                 <th className="font-semibold text-base h-10 px-3 text-left">Período</th>
                 <th className="font-semibold text-base h-10 px-3 text-center">Días</th>
                 <th className="font-semibold text-base h-10 px-3 text-left">Estado</th>
+                <th className="font-semibold text-base h-10 px-3 text-left">Paso</th>
                 <th className="font-semibold text-base h-10 px-3"></th>
               </tr>
             </thead>
             <tbody>
-              {solicitudes.map((s) => (
+              {filteredSolicitudes.map((s) => (
                 <tr key={s.id} className="border-b border-table-row-border hover:bg-table-hover bg-table-row">
                   <td className="py-2 px-3 text-sm text-foreground">{s.usuario.nombre}</td>
                   <td className="py-2 px-3 text-sm text-foreground">
@@ -77,6 +177,9 @@ export default function RequestsPage() {
                     >
                       {s.estado}
                     </span>
+                  </td>
+                  <td className="py-2 px-3 text-sm text-muted-foreground">
+                    {s.paso_actual ? PASO_LABEL[s.paso_actual] : "—"}
                   </td>
                   <td className="py-2 px-3 text-sm text-right">
                     <Link
