@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: "/vacation/requests", label: "Solicitudes", exact: false },
   { href: "/vacation/pending", label: "Pendientes", exact: false, reviewerOnly: true },
   { href: "/vacation/history", label: "Historial", exact: false },
+  { href: "/vacation/periods", label: "Periodos", exact: false, adminOnly: true },
   { href: "/vacation/users", label: "Usuarios", exact: false, adminOnly: true },
 ];
 
