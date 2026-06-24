@@ -1,6 +1,6 @@
-import { withAuth, unauthorizedResponse } from "@/lib/withAuth";
+import { unauthorizedResponse } from "@/lib/withAuth";
 import { AuthError } from "@/lib/withAuth";
-import { findOrCreateUser, findUserRoles } from "@/modules/vacation/repositories/userRoleRepository";
+import { authenticate } from "@/modules/vacation/auth/authenticate";
 import {
   crearSolicitud,
   obtenerSolicitudesPropias,
@@ -17,13 +17,7 @@ const REVIEWER_ROLES: vac_rol_enum[] = [
 
 export async function GET(request: Request) {
   try {
-    const claims = await withAuth(request);
-    const user = await findOrCreateUser({
-      username: claims.preferred_username ?? claims.sub,
-      email: claims.email,
-      nombre: claims.name ?? claims.preferred_username ?? claims.sub,
-    });
-    const roles = await findUserRoles(user.id);
+    const { user, roles } = await authenticate(request);
 
     const reviewerRole = roles.find((r) => REVIEWER_ROLES.includes(r));
     const data = reviewerRole
@@ -39,12 +33,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const claims = await withAuth(request);
-    const user = await findOrCreateUser({
-      username: claims.preferred_username ?? claims.sub,
-      email: claims.email,
-      nombre: claims.name ?? claims.preferred_username ?? claims.sub,
-    });
+    const { user } = await authenticate(request);
 
     const body = await request.json();
     const solicitud = await crearSolicitud(user.id, body);
