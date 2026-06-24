@@ -73,11 +73,15 @@ export async function listByUser(id_usuario: number) {
   });
 }
 
-export async function listPendingForRole(rol: vac_rol_enum) {
-  const paso = Object.entries(PASO_ROL).find(([, r]) => r === rol)?.[0];
-  if (!paso) return [];
+export async function listPendingForRoles(roles: vac_rol_enum[]) {
+  const pasos = Object.entries(PASO_ROL)
+    .filter(([, rol]) => roles.includes(rol))
+    .map(([paso]) => Number(paso));
+
+  if (pasos.length === 0) return [];
+
   return prisma.vac_solicitud.findMany({
-    where: { estado: "Enviado", paso_actual: Number(paso) },
+    where: { estado: "Enviado", paso_actual: { in: pasos } },
     include: CON_USUARIO_Y_REVISIONES,
     orderBy: { fecha_creacion: "asc" },
   });

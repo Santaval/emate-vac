@@ -2,7 +2,7 @@ import { unauthorizedResponse } from "@/lib/withAuth";
 import { AuthError } from "@/lib/withAuth";
 import { authenticate } from "@/modules/vacation/auth/authenticate";
 import { obtenerHistorial } from "@/modules/vacation/services/historyService";
-import { REVIEWER_ROLES } from "@/modules/vacation/types/userRole";
+import { isReviewer } from "@/modules/vacation/types/userRole";
 import type { vac_estado_enum } from "@/app/generated/prisma/client";
 
 export async function GET(request: Request) {
@@ -10,11 +10,11 @@ export async function GET(request: Request) {
     const { user, roles } = await authenticate(request);
 
     const { searchParams } = new URL(request.url);
-    const isReviewer = roles.some((r) => REVIEWER_ROLES.includes(r));
+    const canReview = isReviewer(roles);
 
     const historial = await obtenerHistorial({
       // Professors only see their own history; reviewers see all
-      id_usuario: isReviewer ? undefined : user.id,
+      id_usuario: canReview ? undefined : user.id,
       estado: (searchParams.get("estado") as vac_estado_enum) || undefined,
       fecha_inicio: searchParams.get("fecha_inicio") || undefined,
       fecha_fin: searchParams.get("fecha_fin") || undefined,

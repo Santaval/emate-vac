@@ -3,7 +3,7 @@ import {
   submitRequest,
   getById,
   listByUser,
-  listPendingForRole,
+  listPendingForRoles,
   hasOverlappingRequest,
   updateStatus,
 } from "../repositories/requestRepository";
@@ -15,7 +15,8 @@ import { calcularDiasHabiles } from "./calendarService";
 import { findUserById } from "../repositories/userRoleRepository";
 import type { vac_rol_enum, vac_estado_enum } from "@/app/generated/prisma/client";
 import { prisma } from "@/lib/db";
-import { REVIEWER_ROLES } from "../types/userRole";
+import { getReviewerRoles, hasRole, isReviewer } from "../types/userRole";
+
 
 export class RequestError extends Error {
   constructor(message: string, public statusCode = 400) {
@@ -100,8 +101,14 @@ export async function obtenerSolicitudesPropias(id_usuario: number) {
   return listByUser(id_usuario);
 }
 
-export async function obtenerPendientesParaRol(rol: vac_rol_enum) {
-  return listPendingForRole(rol);
+export async function obtenerPendientesParaRoles(roles: vac_rol_enum[]) {
+  return listPendingForRoles(getReviewerRoles(roles));
+}
+
+export function validarPuedeCrearSolicitud(roles: vac_rol_enum[]) {
+  if (!hasRole(roles, "Profesor")) {
+    throw new RequestError("Solo el rol Profesor puede crear solicitudes", 403);
+  }
 }
 
 export async function obtenerSolicitud(
@@ -111,8 +118,7 @@ export async function obtenerSolicitud(
 ) {
   const solicitud = await getById(id);
   if (!solicitud) throw new RequestError("Solicitud no encontrada", 404);
-  const esRevisor = roles.some((r) => REVIEWER_ROLES.includes(r));
-  if (solicitud.id_usuario !== id_usuario && !esRevisor) {
+  if (solicitud.id_usuario !== id_usuario && !isReviewer(roles)) {
     throw new RequestError("Acceso denegado", 403);
   }
   return solicitud;

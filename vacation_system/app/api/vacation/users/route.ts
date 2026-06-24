@@ -7,12 +7,13 @@ import {
   setIdProfesor,
   setVacationDays,
 } from "@/modules/vacation/repositories/userRoleRepository";
+import { hasRole } from "@/modules/vacation/types/userRole";
 import type { vac_rol_enum } from "@/app/generated/prisma/client";
 
 export async function GET(request: Request) {
   try {
     const { roles } = await authenticate(request);
-    if (!roles.includes("Jefe_Administrativo")) return forbiddenResponse();
+    if (!hasRole(roles, "Jefe_Administrativo")) return forbiddenResponse();
 
     const users = await listUsers();
     return Response.json(users);
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const { roles } = await authenticate(request);
-    if (!roles.includes("Jefe_Administrativo")) return forbiddenResponse();
+    if (!hasRole(roles, "Jefe_Administrativo")) return forbiddenResponse();
 
     const body = await request.json();
     if (!body.id_usuario) {

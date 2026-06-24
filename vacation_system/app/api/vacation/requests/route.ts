@@ -1,24 +1,30 @@
-import { unauthorizedResponse } from "@/lib/withAuth";
+import { unauthorizedResponse, forbiddenResponse } from "@/lib/withAuth";
 import { AuthError } from "@/lib/withAuth";
 import { authenticate } from "@/modules/vacation/auth/authenticate";
 import {
   crearSolicitud,
   obtenerSolicitudesPropias,
-  obtenerPendientesParaRol,
+  obtenerPendientesParaRoles,
   RequestError,
+  validarPuedeCrearSolicitud,
 } from "@/modules/vacation/services/requestService";
-import { REVIEWER_ROLES } from "@/modules/vacation/types/userRole";
+import { hasRole, isReviewer } from "@/modules/vacation/types/userRole";
 
 export async function GET(request: Request) {
   try {
     const { user, roles } = await authenticate(request);
 
-    const reviewerRole = roles.find((r) => REVIEWER_ROLES.includes(r));
-    const data = reviewerRole
-      ? await obtenerPendientesParaRol(reviewerRole)
-      : await obtenerSolicitudesPropias(user.id);
+    if (hasRole(roles, "Profesor")) {
+      const data = await obtenerSolicitudesPropias(user.id);
+      return Response.json(data);
+    }
 
-    return Response.json(data);
+    if (isReviewer(roles)) {
+      const data = await obtenerPendientesParaRoles(roles);
+      return Response.json(data);
+    }
+
+    return forbiddenResponse();
   } catch (e) {
     if (e instanceof AuthError) return unauthorizedResponse();
     throw e;
@@ -27,7 +33,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { user } = await authenticate(request);
+    const { user, roles } = await authenticate(request);
+    validarPuedeCrearSolicitud(roles);
 
     const body = await request.json();
     const solicitud = await crearSolicitud(user.id, body);
