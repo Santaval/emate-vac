@@ -7,8 +7,7 @@ import {
   setIdProfesor,
   setVacationDays,
 } from "@/modules/vacation/repositories/userRoleRepository";
-import { hasRole } from "@/modules/vacation/types/userRole";
-import type { vac_rol_enum } from "@/app/generated/prisma/client";
+import { hasRole, normalizeVacationRoles } from "@/modules/vacation/types/userRole";
 
 export async function GET(request: Request) {
   try {
@@ -34,7 +33,11 @@ export async function PATCH(request: Request) {
     }
 
     if (body.roles !== undefined) {
-      await setUserRoles(Number(body.id_usuario), body.roles as vac_rol_enum[]);
+      const rolesToSave = normalizeVacationRoles(body.roles);
+      if (!rolesToSave) {
+        return Response.json({ error: "roles inválidos" }, { status: 400 });
+      }
+      await setUserRoles(Number(body.id_usuario), rolesToSave);
     }
     if (body.id_profesor !== undefined) {
       await setIdProfesor(Number(body.id_usuario), Number(body.id_profesor));
