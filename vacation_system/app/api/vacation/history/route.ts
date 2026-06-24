@@ -2,13 +2,8 @@ import { unauthorizedResponse } from "@/lib/withAuth";
 import { AuthError } from "@/lib/withAuth";
 import { authenticate } from "@/modules/vacation/auth/authenticate";
 import { obtenerHistorial } from "@/modules/vacation/services/historyService";
-import type { vac_estado_enum, vac_rol_enum } from "@/app/generated/prisma/client";
-
-const REVIEWER_ROLES: vac_rol_enum[] = [
-  "Jefe_de_Departamento",
-  "Director_de_Escuela",
-  "Jefe_Administrativo",
-];
+import { REVIEWER_ROLES } from "@/modules/vacation/types/userRole";
+import type { vac_estado_enum } from "@/app/generated/prisma/client";
 
 export async function GET(request: Request) {
   try {
