@@ -20,6 +20,23 @@ export async function listAuthorizedPeriods(id_usuario?: number) {
   });
 }
 
+export async function findAvailablePeriodCoveringRange(
+  id_usuario: number,
+  fecha_inicio: Date,
+  fecha_fin: Date
+) {
+  return prisma.vac_periodo_autorizado.findFirst({
+    where: {
+      id_usuario,
+      estado: "Disponible",
+      fecha_inicio: { lte: fecha_inicio },
+      fecha_fin: { gte: fecha_fin },
+    },
+    include: CON_USUARIO,
+    orderBy: [{ fecha_inicio: "asc" }, { id: "asc" }],
+  });
+}
+
 export async function createAuthorizedPeriod(data: {
   id_usuario: number;
   fecha_inicio: Date;

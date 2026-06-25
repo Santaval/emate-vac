@@ -12,6 +12,7 @@ import {
   validateCreateRequestInput,
 } from "../validators/createRequestSchema";
 import { calcularDiasHabiles } from "./calendarService";
+import { findAvailablePeriodCoveringRange } from "../repositories/authorizedPeriodRepository";
 import { findUserById } from "../repositories/userRoleRepository";
 import type { vac_rol_enum, vac_estado_enum } from "@/app/generated/prisma/client";
 import { prisma } from "@/lib/db";
@@ -48,8 +49,17 @@ export async function crearSolicitud(
 
   const user = await findUserById(id_usuario);
   if (!user) throw new RequestError("Usuario no encontrado", 404);
+
+  const authorizedPeriod = await findAvailablePeriodCoveringRange(id_usuario, fecha_inicio, fecha_fin);
+  if (!authorizedPeriod) {
+    throw new RequestError("El rango seleccionado debe estar dentro de un periodo autorizado disponible");
+  }
+
   if (dias_habiles > user.dias_vacaciones_disponibles) {
     throw new RequestError("La solicitud supera los días de vacaciones disponibles");
+  }
+  if (dias_habiles > authorizedPeriod.dias_autorizados) {
+    throw new RequestError("La solicitud supera los días autorizados para el periodo seleccionado");
   }
 
   const overlaps = await hasOverlappingRequest(id_usuario, fecha_inicio, fecha_fin);
