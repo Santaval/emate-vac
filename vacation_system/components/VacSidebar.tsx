@@ -7,6 +7,7 @@ import { useState } from "react";
 
 const NAV_ITEMS = [
   { href: "/vacation", label: "Inicio", exact: true },
+  { href: "/vacation/my-periods", label: "Mis periodos", exact: false },
   { href: "/vacation/requests", label: "Solicitudes", exact: false },
   { href: "/vacation/pending", label: "Pendientes", exact: false, reviewerOnly: true },
   { href: "/vacation/history", label: "Historial", exact: false },
