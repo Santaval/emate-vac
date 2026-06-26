@@ -67,13 +67,28 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
       .finally(() => setLoading(false));
   }, [id]);
 
-  async function handleAction(action: "approve" | "reject") {
+  async function handleAction(action: "approve" | "reject" | "cancel") {
     if (action === "reject" && !comentario.trim()) {
       setActionError("El comentario es requerido para rechazar");
       return;
     }
     setActing(true);
     setActionError("");
+
+    if (action === "cancel") {
+      const res = await apiFetch(`/api/vacation/requests/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ action: "draft" }),
+      });
+      if (!res.ok) {
+        setActionError(await getApiErrorMessage(res, getDefaultApiErrorMessage(res.status)));
+        setActing(false);
+        return;
+      }
+      router.push("/vacation/requests");
+      return;
+    }
+
     const endpoint = action === "approve" ? "/api/vacation/approve" : "/api/vacation/reject";
     const res = await apiFetch(endpoint, {
       method: "POST",
@@ -192,6 +207,15 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
             >
               Rechazar
             </button>
+            {s.paso_actual === 1 && (
+              <button
+                disabled={acting}
+                onClick={() => handleAction("cancel")}
+                className="flex-1 bg-zinc-200 hover:bg-zinc-300 text-zinc-800 text-sm px-4 py-2 rounded-md font-medium disabled:opacity-50 transition-colors"
+              >
+                Cancelar
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -210,6 +234,24 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
             className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm px-4 py-2 rounded-md font-medium disabled:opacity-50 transition-colors"
           >
             Enviar solicitud
+          </button>
+        </div>
+      )}
+
+      {/* Cancel approved */}
+      {s.estado === "Aprobado" && (
+        <div className="bg-card rounded-lg border border-border shadow-sm p-5">
+          {actionError && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2 mb-3">
+              {actionError}
+            </p>
+          )}
+          <button
+            disabled={acting}
+            onClick={() => handleAction("cancel")}
+            className="bg-zinc-200 hover:bg-zinc-300 text-zinc-800 text-sm px-4 py-2 rounded-md font-medium disabled:opacity-50 transition-colors"
+          >
+            Cancelar solicitud
           </button>
         </div>
       )}
