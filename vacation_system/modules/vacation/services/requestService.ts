@@ -14,6 +14,7 @@ import {
 import { calcularDiasHabiles } from "./calendarService";
 import { findUserById } from "../repositories/userRoleRepository";
 import type { vac_rol_enum, vac_estado_enum } from "@/app/generated/prisma/client";
+import { prisma } from "@/lib/db";
 
 export class RequestError extends Error {
   constructor(message: string, public statusCode = 400) {
@@ -73,6 +74,24 @@ export async function enviarSolicitud(id: number, id_usuario: number) {
   if (overlaps) {
     throw new RequestError("Ya existe una solicitud para ese rango de fechas");
   }
+  await prisma.$transaction(async (tx) => { 
+    const updated = await tx.usuario.updateMany({
+      where: {
+        id: solicitud.id_usuario,
+        dias_vacaciones_disponibles: { gte: solicitud.dias_habiles },
+      },
+      data: {
+        dias_vacaciones_disponibles: {
+          decrement: solicitud.dias_habiles,
+        },
+      },
+    });
+
+    if (updated.count === 0) {
+      throw new RequestError("El solicitante no tiene suficientes días disponibles");
+    }
+
+  })
   return submitRequest(id);
 }
 
