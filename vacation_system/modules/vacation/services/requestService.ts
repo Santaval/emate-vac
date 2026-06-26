@@ -69,6 +69,10 @@ export async function enviarSolicitud(id: number, id_usuario: number) {
   if (solicitud.estado !== "Borrador") {
     throw new RequestError("Solo se pueden enviar solicitudes en estado Borrador");
   }
+  const overlaps = await hasOverlappingRequest(id_usuario, solicitud.fecha_inicio, solicitud.fecha_fin, id);
+  if (overlaps) {
+    throw new RequestError("Ya existe una solicitud para ese rango de fechas");
+  }
   return submitRequest(id);
 }
 

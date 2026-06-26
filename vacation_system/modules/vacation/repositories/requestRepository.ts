@@ -31,14 +31,16 @@ export async function createRequest(
 export async function hasOverlappingRequest(
   id_usuario: number,
   fecha_inicio: Date,
-  fecha_fin: Date
+  fecha_fin: Date,
+  excludeId?: number
 ) {
   const existing = await prisma.vac_solicitud.findFirst({
     where: {
       id_usuario,
-      estado: { in: ["Borrador", "Enviado", "Aprobado"] },
+      estado: { in: ["Enviado", "Aprobado"] },
       fecha_inicio: { lte: fecha_fin },
       fecha_fin: { gte: fecha_inicio },
+      ...(excludeId !== undefined && { id: { not: excludeId } }),
     },
     select: { id: true },
   });
