@@ -5,6 +5,7 @@ import {
   obtenerSolicitud,
   enviarSolicitud,
   RequestError,
+  actualizarEstado,
 } from "@/modules/vacation/services/requestService";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -34,6 +35,11 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
     if (body.action === "submit") {
       const updated = await enviarSolicitud(Number(id), user.id);
+      return Response.json(updated);
+    }
+
+    if (body.action === "draft") {
+      const updated = await actualizarEstado(Number(id), "Borrador");
       return Response.json(updated);
     }
 

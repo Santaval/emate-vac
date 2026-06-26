@@ -5,6 +5,7 @@ import {
   listByUser,
   listPendingForRole,
   hasOverlappingRequest,
+  updateStatus,
 } from "../repositories/requestRepository";
 import {
   CreateRequestValidationError,
@@ -12,7 +13,7 @@ import {
 } from "../validators/createRequestSchema";
 import { calcularDiasHabiles } from "./calendarService";
 import { findUserById } from "../repositories/userRoleRepository";
-import type { vac_rol_enum } from "@/app/generated/prisma/client";
+import type { vac_rol_enum, vac_estado_enum } from "@/app/generated/prisma/client";
 
 export class RequestError extends Error {
   constructor(message: string, public statusCode = 400) {
@@ -81,6 +82,12 @@ export async function obtenerPendientesParaRol(rol: vac_rol_enum) {
 
 export async function obtenerSolicitud(id: number) {
   const solicitud = await getById(id);
+  if (!solicitud) throw new RequestError("Solicitud no encontrada", 404);
+  return solicitud;
+}
+
+export async function actualizarEstado(id: number, estado: vac_estado_enum) {
+  const solicitud = await updateStatus(id, estado);
   if (!solicitud) throw new RequestError("Solicitud no encontrada", 404);
   return solicitud;
 }
