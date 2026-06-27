@@ -109,8 +109,8 @@ export async function obtenerSolicitud(id: number) {
   return solicitud;
 }
 
-export async function actualizarEstado(id: number, estado: vac_estado_enum) {
-  const solicitud = await updateStatus(id, estado);
+export async function actualizarEstado(id: number, estado: vac_estado_enum, paso_actual?: number | null) {
+  const solicitud = await updateStatus(id, estado, paso_actual);
   if (!solicitud) throw new RequestError("Solicitud no encontrada", 404);
   return solicitud;
 }

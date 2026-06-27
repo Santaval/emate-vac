@@ -39,7 +39,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     }
 
     if (body.action === "draft") {
-      const updated = await actualizarEstado(Number(id), "Borrador");
+      const updated = await actualizarEstado(Number(id), "Borrador", undefined);
       return Response.json(updated);
     }
 

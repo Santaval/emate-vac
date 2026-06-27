@@ -85,12 +85,25 @@ export async function updateStatus(
   estado: vac_estado_enum,
   paso_actual?: number | null
 ) {
-  return prisma.vac_solicitud.update({
-    where: { id },
-    data: {
-      estado,
-      ...(paso_actual !== undefined ? { paso_actual } : {}),
-      fecha_modificacion: new Date(),
-    },
+  return prisma.$transaction(async (tx) => {
+    const solicitud = await tx.vac_solicitud.update({
+      where: { id },
+      data: {
+        estado,
+        paso_actual: estado === "Borrador" ? null : paso_actual !== undefined ? paso_actual : undefined,
+        fecha_modificacion: new Date(),
+      },
+    });
+
+    if (estado === "Borrador") {
+      await tx.usuario.updateMany({
+        where: { id: solicitud.id_usuario },
+        data: {
+          dias_vacaciones_disponibles: { increment: solicitud.dias_habiles },
+        },
+      });
+    }
+
+    return solicitud;
   });
 }

@@ -99,7 +99,7 @@ export async function rechazar(
     });
 
     if (updated.count === 0) {
-      throw new ReviewError("El solicitante no tiene suficientes días disponibles");
+      throw new ReviewError("Error al restaurar días disponibles");
     }
   });
 }
