@@ -16,6 +16,7 @@ import { findAvailablePeriodCoveringRange } from "../repositories/authorizedPeri
 import { findUserById } from "../repositories/userRoleRepository";
 import type { vac_rol_enum, vac_estado_enum } from "@/app/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import { notifyPendingReview } from "./emailNotificationService";
 import { getReviewerRoles, hasRole, isReviewer } from "../types/userRole";
 
 
@@ -82,11 +83,12 @@ export async function enviarSolicitud(id: number, id_usuario: number) {
   if (solicitud.estado !== "Borrador") {
     throw new RequestError("Solo se pueden enviar solicitudes en estado Borrador");
   }
-  const overlaps = await hasOverlappingRequest(id_usuario, solicitud.fecha_inicio, solicitud.fecha_fin, id);
+   const overlaps = await hasOverlappingRequest(id_usuario, solicitud.fecha_inicio, solicitud.fecha_fin, id);
   if (overlaps) {
     throw new RequestError("Ya existe una solicitud para ese rango de fechas");
   }
-  await prisma.$transaction(async (tx) => { 
+
+  await prisma.$transaction(async (tx) => {
     const updated = await tx.usuario.updateMany({
       where: {
         id: solicitud.id_usuario,
@@ -102,9 +104,15 @@ export async function enviarSolicitud(id: number, id_usuario: number) {
     if (updated.count === 0) {
       throw new RequestError("El solicitante no tiene suficientes días disponibles");
     }
+  });
 
-  })
-  return submitRequest(id);
+  const updated = await submitRequest(id);
+  const solicitudEnviada = await getById(id);
+  if (solicitudEnviada) {
+    await notifyPendingReview(solicitudEnviada, solicitudEnviada.paso_actual);
+  }
+
+  return updated;
 }
 
 export async function obtenerSolicitudesPropias(id_usuario: number) {

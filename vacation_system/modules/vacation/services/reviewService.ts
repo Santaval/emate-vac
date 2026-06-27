@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/db";
 import { getById } from "../repositories/requestRepository";
+import {
+  notifyApplicantApproved,
+  notifyApplicantRejected,
+  notifyPendingReview,
+} from "./emailNotificationService";
 import { getExpectedRoleForStep, TOTAL_PASOS } from "../types/userRole";
 import type { vac_rol_enum } from "@/app/generated/prisma/client";
 
@@ -57,6 +62,12 @@ export async function aprobar(
     });
   });
 
+  if (esUltimoPaso) {
+    await notifyApplicantApproved(solicitud);
+  } else {
+    await notifyPendingReview(solicitud, solicitud.paso_actual! + 1);
+  }
+
   return { aprobadoFinal: esUltimoPaso };
 }
 
@@ -86,10 +97,12 @@ export async function rechazar(
         comentario,
       },
     });
+    
     await tx.vac_solicitud.update({
       where: { id: id_solicitud },
       data: { estado: "Rechazado", paso_actual: null, fecha_modificacion: new Date() },
     });
+
     const updated = await tx.usuario.updateMany({
       where: {
         id: solicitud.id_usuario,
@@ -106,4 +119,6 @@ export async function rechazar(
       throw new ReviewError("Error al restaurar días disponibles");
     }
   });
+
+  await notifyApplicantRejected(solicitud, comentario);
 }

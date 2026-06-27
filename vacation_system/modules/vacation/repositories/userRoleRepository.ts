@@ -39,6 +39,23 @@ export async function listUsers() {
   });
 }
 
+export async function listActiveUsersByRole(rol: vac_rol_enum) {
+  return prisma.usuario.findMany({
+    where: {
+      activo: true,
+      email: { not: null },
+      usuario_rol: { some: { rol } },
+    },
+    select: {
+      id: true,
+      username: true,
+      nombre: true,
+      email: true,
+    },
+    orderBy: { nombre: "asc" },
+  });
+}
+
 export async function setUserRoles(id_usuario: number, roles: vac_rol_enum[]) {
   await prisma.usuario_rol.deleteMany({ where: { id_usuario } });
   if (roles.length > 0) {
