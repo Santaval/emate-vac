@@ -73,7 +73,7 @@ export async function rechazar(
   validarPasoYRol(solicitud.paso_actual, rolRevisor);
 
   await prisma.$transaction(async (tx) => {
-    prisma.vac_revision.create({
+    await tx.vac_revision.create({
       data: {
         id_solicitud,
         id_usuario: id_usuario_revisor,
@@ -82,7 +82,7 @@ export async function rechazar(
         comentario,
       },
     });
-    prisma.vac_solicitud.update({
+    await tx.vac_solicitud.update({
       where: { id: id_solicitud },
       data: { estado: "Rechazado", paso_actual: null, fecha_modificacion: new Date() },
     });
