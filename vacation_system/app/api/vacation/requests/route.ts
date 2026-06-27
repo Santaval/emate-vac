@@ -7,13 +7,7 @@ import {
   obtenerPendientesParaRol,
   RequestError,
 } from "@/modules/vacation/services/requestService";
-import type { vac_rol_enum } from "@/app/generated/prisma/client";
-
-const REVIEWER_ROLES: vac_rol_enum[] = [
-  "Jefe_de_Departamento",
-  "Director_de_Escuela",
-  "Jefe_Administrativo",
-];
+import { REVIEWER_ROLES } from "@/modules/vacation/types/userRole";
 
 export async function GET(request: Request) {
   try {

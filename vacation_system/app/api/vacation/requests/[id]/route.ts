@@ -12,14 +12,15 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(request: Request, { params }: RouteContext) {
   try {
-    await authenticate(request);
+    const { user, roles } = await authenticate(request);
 
     const { id } = await params;
-    const solicitud = await obtenerSolicitud(Number(id));
+    const solicitud = await obtenerSolicitud(Number(id), user.id, roles);
     return Response.json(solicitud);
   } catch (e) {
     if (e instanceof AuthError) return unauthorizedResponse();
     if (e instanceof RequestError) {
+      if (e.statusCode === 403) return forbiddenResponse(e.message);
       return Response.json({ error: e.message }, { status: e.statusCode });
     }
     throw e;
