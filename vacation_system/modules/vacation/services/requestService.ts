@@ -68,7 +68,7 @@ export async function enviarSolicitud(id: number, id_usuario: number) {
   if (solicitud.estado !== "Borrador") {
     throw new RequestError("Solo se pueden enviar solicitudes en estado Borrador");
   }
-  return submitRequest(id);
+  return submitRequest(id, id_usuario);
 }
 
 export async function obtenerSolicitudesPropias(id_usuario: number) {

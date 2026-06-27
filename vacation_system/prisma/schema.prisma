@@ -72,4 +72,8 @@ enum vac_estado_enum {
 enum vac_accion_enum {
   Aprobado
   Rechazado
+  Creado
+  Enviado
+  Editado
+  Cancelado
 }

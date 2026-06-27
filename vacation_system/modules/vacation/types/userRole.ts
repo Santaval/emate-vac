@@ -2,8 +2,8 @@ export type { vac_rol_enum as VacRol } from "@/app/generated/prisma/client";
 
 export const PASO_ROL: Record<number, import("@/app/generated/prisma/client").vac_rol_enum> = {
   1: "Jefe_de_Departamento",
-  2: "Director_de_Escuela",
-  3: "Jefe_Administrativo",
+  2: "Jefe_Administrativo",
+  3: "Director_de_Escuela",
 };
 
 export const ROL_PASO: Record<string, number> = {

@@ -3,8 +3,8 @@ import { authenticate } from "@/modules/vacation/auth/authenticate";
 
 export async function GET(request: Request) {
   try {
-    const { roles } = await authenticate(request);
-    return Response.json({ roles });
+    const { user, roles } = await authenticate(request);
+    return Response.json({ id: user.id, username: user.username, roles });
   } catch (e) {
     if (e instanceof AuthError) return unauthorizedResponse();
     throw e;
