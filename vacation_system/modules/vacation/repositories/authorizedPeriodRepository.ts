@@ -6,6 +6,7 @@ const USUARIO_SELECT = {
   username: true,
   nombre: true,
   email: true,
+  dias_vacaciones_disponibles: true,
 } as const;
 
 const CON_USUARIO = {

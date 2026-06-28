@@ -43,6 +43,12 @@ function parseDays(value: unknown) {
   return days;
 }
 
+function ensureDaysDoNotExceedUserBalance(days: number, userDays: number) {
+  if (days > userDays) {
+    throw new AuthorizedPeriodError("Los días autorizados superan los días de vacaciones disponibles del docente");
+  }
+}
+
 function parseStatus(value: unknown): vac_periodo_estado_enum {
   if (value === undefined) return "Disponible";
   if (typeof value === "string" && PERIOD_STATUSES.includes(value as vac_periodo_estado_enum)) {
@@ -105,11 +111,14 @@ export async function crearPeriodoAutorizado(roles: vac_rol_enum[], input: unkno
     throw new AuthorizedPeriodError("fecha_fin debe ser mayor o igual a fecha_inicio");
   }
 
+  const dias_autorizados = parseDays(body.dias_autorizados);
+  ensureDaysDoNotExceedUserBalance(dias_autorizados, user.dias_vacaciones_disponibles);
+
   return createAuthorizedPeriod({
     id_usuario,
     fecha_inicio,
     fecha_fin,
-    dias_autorizados: parseDays(body.dias_autorizados),
+    dias_autorizados,
     estado: parseStatus(body.estado),
     observacion: parseObservation(body.observacion),
   });
@@ -127,6 +136,7 @@ export async function actualizarPeriodoAutorizado(
   const body = parseBody(input);
   const fecha_inicio = parseOptionalDate(body.fecha_inicio, "fecha_inicio");
   const fecha_fin = parseOptionalDate(body.fecha_fin, "fecha_fin");
+  const dias_autorizados = body.dias_autorizados !== undefined ? parseDays(body.dias_autorizados) : undefined;
   const nextStart = fecha_inicio ?? existing.fecha_inicio;
   const nextEnd = fecha_fin ?? existing.fecha_fin;
 
@@ -134,10 +144,16 @@ export async function actualizarPeriodoAutorizado(
     throw new AuthorizedPeriodError("fecha_fin debe ser mayor o igual a fecha_inicio");
   }
 
+  if (dias_autorizados !== undefined) {
+    const user = await findUserById(existing.id_usuario);
+    if (!user) throw new AuthorizedPeriodError("Usuario no encontrado", 404);
+    ensureDaysDoNotExceedUserBalance(dias_autorizados, user.dias_vacaciones_disponibles);
+  }
+
   return updateAuthorizedPeriod(id, {
     ...(fecha_inicio ? { fecha_inicio } : {}),
     ...(fecha_fin ? { fecha_fin } : {}),
-    ...(body.dias_autorizados !== undefined ? { dias_autorizados: parseDays(body.dias_autorizados) } : {}),
+    ...(dias_autorizados !== undefined ? { dias_autorizados } : {}),
     ...(body.estado !== undefined ? { estado: parseOptionalStatus(body.estado) } : {}),
     ...(body.observacion !== undefined ? { observacion: parseObservation(body.observacion) ?? null } : {}),
   });

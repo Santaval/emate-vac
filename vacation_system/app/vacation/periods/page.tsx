@@ -9,6 +9,7 @@ type Usuario = {
   username: string;
   nombre: string;
   email: string | null;
+  dias_vacaciones_disponibles: number;
 };
 
 type Periodo = {
@@ -22,6 +23,15 @@ type Periodo = {
   usuario: Usuario;
 };
 
+type PeriodForm = {
+  id_usuario: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  dias_autorizados: string;
+  estado: Periodo["estado"];
+  observacion: string;
+};
+
 const STATUS_OPTIONS = ["Disponible", "Utilizado", "Vencido"] as const;
 
 const STATUS_CLASS: Record<Periodo["estado"], string> = {
@@ -30,13 +40,18 @@ const STATUS_CLASS: Record<Periodo["estado"], string> = {
   Vencido: "bg-red-100 text-red-700",
 };
 
+function formatDate(value: string) {
+  const [year, month, day] = value.slice(0, 10).split("-");
+  return `${Number(day)}/${Number(month)}/${year}`;
+}
+
 export default function AuthorizedPeriodsPage() {
   const [users, setUsers] = useState<Usuario[]>([]);
   const [periods, setPeriods] = useState<Periodo[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<PeriodForm>({
     id_usuario: "",
     fecha_inicio: "",
     fecha_fin: "",
@@ -49,6 +64,24 @@ export default function AuthorizedPeriodsPage() {
     () => users.filter((user) => user.username && user.nombre),
     [users]
   );
+  const selectedUser = useMemo(
+    () => users.find((user) => String(user.id) === form.id_usuario) ?? null,
+    [form.id_usuario, users]
+  );
+  const periodValidationMessage = useMemo(() => {
+    if (!selectedUser) return "";
+    if (selectedUser.dias_vacaciones_disponibles <= 0) {
+      return "El docente no tiene días de vacaciones disponibles.";
+    }
+    if (!form.dias_autorizados) return "";
+
+    const days = Number(form.dias_autorizados);
+    if (!Number.isInteger(days) || days <= 0) return "";
+    if (days > selectedUser.dias_vacaciones_disponibles) {
+      return `El periodo autoriza ${days} días, pero el docente solo tiene ${selectedUser.dias_vacaciones_disponibles} días disponibles.`;
+    }
+    return "";
+  }, [form.dias_autorizados, selectedUser]);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,8 +89,8 @@ export default function AuthorizedPeriodsPage() {
     async function loadInitialData() {
       try {
         const [usersRes, periodsRes] = await Promise.all([
-          apiFetch("/api/vacation/users"),
-          apiFetch("/api/vacation/authorized-periods"),
+          apiFetch("/api/vacation/users", { cache: "no-store" }),
+          apiFetch("/api/vacation/authorized-periods", { cache: "no-store" }),
         ]);
 
         if (!usersRes.ok) {
@@ -88,39 +121,54 @@ export default function AuthorizedPeriodsPage() {
     };
   }, []);
 
+  function updateFormField(field: keyof PeriodForm, value: string) {
+    setForm((current) => ({ ...current, [field]: value }));
+    setError("");
+  }
+
   async function createPeriod(e: React.FormEvent) {
     e.preventDefault();
+
+    if (periodValidationMessage) {
+      setError(periodValidationMessage);
+      return;
+    }
+
     setSaving(true);
     setError("");
 
-    const res = await apiFetch("/api/vacation/authorized-periods", {
-      method: "POST",
-      body: JSON.stringify({
-        id_usuario: Number(form.id_usuario),
-        fecha_inicio: form.fecha_inicio,
-        fecha_fin: form.fecha_fin,
-        dias_autorizados: Number(form.dias_autorizados),
-        estado: form.estado,
-        observacion: form.observacion || undefined,
-      }),
-    });
-
-    if (res.ok) {
-      const created = await res.json();
-      setPeriods((prev) => [created, ...prev]);
-      setForm({
-        id_usuario: form.id_usuario,
-        fecha_inicio: "",
-        fecha_fin: "",
-        dias_autorizados: "",
-        estado: "Disponible",
-        observacion: "",
+    try {
+      const res = await apiFetch("/api/vacation/authorized-periods", {
+        method: "POST",
+        body: JSON.stringify({
+          id_usuario: Number(form.id_usuario),
+          fecha_inicio: form.fecha_inicio,
+          fecha_fin: form.fecha_fin,
+          dias_autorizados: Number(form.dias_autorizados),
+          estado: form.estado,
+          observacion: form.observacion || undefined,
+        }),
       });
-    } else {
-      setError(await getApiErrorMessage(res, getDefaultApiErrorMessage(res.status)));
-    }
 
-    setSaving(false);
+      if (res.ok) {
+        const created = await res.json();
+        setPeriods((prev) => [created, ...prev]);
+        setForm({
+          id_usuario: form.id_usuario,
+          fecha_inicio: "",
+          fecha_fin: "",
+          dias_autorizados: "",
+          estado: "Disponible",
+          observacion: "",
+        });
+      } else {
+        setError(await getApiErrorMessage(res, getDefaultApiErrorMessage(res.status)));
+      }
+    } catch {
+      setError("No se pudo crear el periodo autorizado.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function updateStatus(period: Periodo, estado: Periodo["estado"]) {
@@ -181,14 +229,14 @@ export default function AuthorizedPeriodsPage() {
             <span className="text-xs font-medium text-muted-foreground">Docente</span>
             <select
               value={form.id_usuario}
-              onChange={(e) => setForm({ ...form, id_usuario: e.target.value })}
+              onChange={(e) => updateFormField("id_usuario", e.target.value)}
               required
               className={inputClass}
             >
               <option value="">Seleccione</option>
               {teacherUsers.map((user) => (
                 <option key={user.id} value={user.id}>
-                  {user.nombre}
+                  {user.nombre} ({user.dias_vacaciones_disponibles} días)
                 </option>
               ))}
             </select>
@@ -198,7 +246,7 @@ export default function AuthorizedPeriodsPage() {
             <input
               type="date"
               value={form.fecha_inicio}
-              onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })}
+              onChange={(e) => updateFormField("fecha_inicio", e.target.value)}
               required
               className={inputClass}
             />
@@ -209,7 +257,7 @@ export default function AuthorizedPeriodsPage() {
               type="date"
               value={form.fecha_fin}
               min={form.fecha_inicio}
-              onChange={(e) => setForm({ ...form, fecha_fin: e.target.value })}
+              onChange={(e) => updateFormField("fecha_fin", e.target.value)}
               required
               className={inputClass}
             />
@@ -219,17 +267,24 @@ export default function AuthorizedPeriodsPage() {
             <input
               type="number"
               min="1"
+              max={selectedUser ? selectedUser.dias_vacaciones_disponibles : undefined}
               value={form.dias_autorizados}
-              onChange={(e) => setForm({ ...form, dias_autorizados: e.target.value })}
+              onChange={(e) => updateFormField("dias_autorizados", e.target.value)}
+              disabled={selectedUser?.dias_vacaciones_disponibles === 0}
               required
               className={inputClass}
             />
+            {selectedUser && (
+              <p className={`mt-1 text-xs ${selectedUser.dias_vacaciones_disponibles === 0 ? "text-red-600" : "text-muted-foreground"}`}>
+                Disponibles: {selectedUser.dias_vacaciones_disponibles}
+              </p>
+            )}
           </label>
           <label>
             <span className="text-xs font-medium text-muted-foreground">Estado</span>
             <select
               value={form.estado}
-              onChange={(e) => setForm({ ...form, estado: e.target.value })}
+              onChange={(e) => updateFormField("estado", e.target.value)}
               className={inputClass}
             >
               {STATUS_OPTIONS.map((status) => (
@@ -243,15 +298,20 @@ export default function AuthorizedPeriodsPage() {
             <span className="text-xs font-medium text-muted-foreground">Observación</span>
             <input
               value={form.observacion}
-              onChange={(e) => setForm({ ...form, observacion: e.target.value })}
+              onChange={(e) => updateFormField("observacion", e.target.value)}
               maxLength={300}
               className={inputClass}
             />
           </label>
+          {periodValidationMessage && (
+            <p className="md:col-span-6 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+              {periodValidationMessage}
+            </p>
+          )}
           <div className="flex items-end">
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || Boolean(periodValidationMessage)}
               className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
             >
               Guardar
@@ -287,8 +347,8 @@ export default function AuthorizedPeriodsPage() {
                     <p className="text-xs text-muted-foreground">{period.usuario.username}</p>
                   </td>
                   <td className="py-2 px-3 text-sm text-foreground">
-                    {new Date(period.fecha_inicio).toLocaleDateString("es-CR")} →{" "}
-                    {new Date(period.fecha_fin).toLocaleDateString("es-CR")}
+                    {formatDate(period.fecha_inicio)} →{" "}
+                    {formatDate(period.fecha_fin)}
                   </td>
                   <td className="py-2 px-3 text-sm text-center text-foreground">
                     {period.dias_autorizados}

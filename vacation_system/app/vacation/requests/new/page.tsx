@@ -15,6 +15,19 @@ type Periodo = {
   observacion: string | null;
 };
 
+type CurrentUserResponse = {
+  user: {
+    id: number;
+    dias_vacaciones_disponibles: number;
+  };
+};
+
+type RequestForm = {
+  fecha_inicio: string;
+  fecha_fin: string;
+  observacion: string;
+};
+
 function countWeekdays(start: string, end: string): number {
   if (!start || !end) return 0;
   const s = new Date(start + "T00:00:00");
@@ -22,12 +35,19 @@ function countWeekdays(start: string, end: string): number {
   return calcularDiasHabiles(s, e);
 }
 
+function formatDate(value: string) {
+  const [year, month, day] = value.slice(0, 10).split("-");
+  return `${Number(day)}/${Number(month)}/${year}`;
+}
+
 export default function NewRequestPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ fecha_inicio: "", fecha_fin: "", observacion: "" });
+  const [form, setForm] = useState<RequestForm>({ fecha_inicio: "", fecha_fin: "", observacion: "" });
   const [periods, setPeriods] = useState<Periodo[]>([]);
+  const [availableDays, setAvailableDays] = useState<number | null>(null);
   const [loadingPeriods, setLoadingPeriods] = useState(true);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const [saving, setSaving] = useState(false);
 
   const dias = countWeekdays(form.fecha_inicio, form.fecha_fin);
@@ -45,37 +65,77 @@ export default function NewRequestPage() {
   }, [availablePeriods, form.fecha_fin, form.fecha_inicio]);
   const hasSelectedRange = Boolean(form.fecha_inicio && form.fecha_fin);
   const rangeOutsidePeriod = hasSelectedRange && !selectedPeriod;
+  const requestValidationMessage = useMemo(() => {
+    if (!hasSelectedRange) return "";
+    if (dias === 0) return "El rango seleccionado no contiene días hábiles.";
+    if (availableDays !== null && availableDays <= 0) {
+      return "No tiene días de vacaciones disponibles para crear una solicitud.";
+    }
+    if (availableDays !== null && dias > availableDays) {
+      return `La solicitud usa ${dias} días y solo tiene ${availableDays} días de vacaciones disponibles.`;
+    }
+    if (rangeOutsidePeriod) return "El rango seleccionado debe estar dentro de uno de sus periodos disponibles.";
+    if (selectedPeriod && dias > selectedPeriod.dias_autorizados) {
+      return `La solicitud usa ${dias} días y el periodo seleccionado autoriza ${selectedPeriod.dias_autorizados} días.`;
+    }
+    return "";
+  }, [availableDays, dias, hasSelectedRange, rangeOutsidePeriod, selectedPeriod]);
+  const isSelectedRangeValid = hasSelectedRange && !requestValidationMessage;
+  const error = submitError || loadError;
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadPeriods() {
+    async function loadInitialData() {
       try {
-        const response = await apiFetch("/api/vacation/authorized-periods");
-        if (!response.ok) {
-          throw new Error(await getApiErrorMessage(response, getDefaultApiErrorMessage(response.status)));
+        const meResponse = await apiFetch("/api/vacation/me", { cache: "no-store" });
+        if (!meResponse.ok) {
+          throw new Error(await getApiErrorMessage(meResponse, getDefaultApiErrorMessage(meResponse.status)));
         }
-        const data = await response.json();
-        if (!cancelled) setPeriods(data);
+
+        const meData = await meResponse.json() as CurrentUserResponse;
+        const periodsResponse = await apiFetch(`/api/vacation/authorized-periods?id_usuario=${meData.user.id}`, {
+          cache: "no-store",
+        });
+        if (!periodsResponse.ok) {
+          throw new Error(await getApiErrorMessage(periodsResponse, getDefaultApiErrorMessage(periodsResponse.status)));
+        }
+
+        const periodsData = await periodsResponse.json() as Periodo[];
+        if (!cancelled) {
+          setPeriods(periodsData);
+          setAvailableDays(meData.user.dias_vacaciones_disponibles);
+        }
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "No se pudieron cargar los periodos autorizados.");
+          setLoadError(e instanceof Error ? e.message : "No se pudieron cargar los periodos autorizados.");
         }
       } finally {
         if (!cancelled) setLoadingPeriods(false);
       }
     }
 
-    void loadPeriods();
+    void loadInitialData();
 
     return () => {
       cancelled = true;
     };
   }, []);
 
+  function updateFormField(field: keyof RequestForm, value: string) {
+    setForm((current) => ({ ...current, [field]: value }));
+    setSubmitError("");
+  }
+
   async function handleSubmit(e: React.FormEvent, action: "save" | "submit") {
     e.preventDefault();
-    setError("");
+    setSubmitError("");
+
+    if (requestValidationMessage) {
+      setSubmitError(requestValidationMessage);
+      return;
+    }
+
     setSaving(true);
     try {
       const res = await apiFetch("/api/vacation/requests", {
@@ -87,7 +147,7 @@ export default function NewRequestPage() {
         }),
       });
       if (!res.ok) {
-        setError(await getApiErrorMessage(res, getDefaultApiErrorMessage(res.status)));
+        setSubmitError(await getApiErrorMessage(res, getDefaultApiErrorMessage(res.status)));
         return;
       }
       const data = await res.json();
@@ -98,7 +158,7 @@ export default function NewRequestPage() {
           body: JSON.stringify({ action: "submit" }),
         });
         if (!submitRes.ok) {
-          setError(await getApiErrorMessage(submitRes, getDefaultApiErrorMessage(submitRes.status)));
+          setSubmitError(await getApiErrorMessage(submitRes, getDefaultApiErrorMessage(submitRes.status)));
           return;
         }
       }
@@ -118,6 +178,11 @@ export default function NewRequestPage() {
       <div className="table-container">
         <div className="px-4 py-3 border-b border-table-row-border bg-table-header">
           <h2 className="text-sm font-semibold text-foreground">Periodos disponibles</h2>
+          {availableDays !== null && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Días disponibles actuales: {availableDays}
+            </p>
+          )}
         </div>
         {loadingPeriods ? (
           <p className="px-4 py-5 text-sm text-muted-foreground">Cargando periodos…</p>
@@ -130,8 +195,8 @@ export default function NewRequestPage() {
             {availablePeriods.map((period) => (
               <div key={period.id} className="grid gap-2 px-4 py-3 text-sm md:grid-cols-[1fr_auto_auto] bg-table-row">
                 <span className="text-foreground">
-                  {new Date(period.fecha_inicio).toLocaleDateString("es-CR")} →{" "}
-                  {new Date(period.fecha_fin).toLocaleDateString("es-CR")}
+                  {formatDate(period.fecha_inicio)} →{" "}
+                  {formatDate(period.fecha_fin)}
                 </span>
                 <span className="text-muted-foreground">{period.dias_autorizados} días</span>
                 {period.observacion && (
@@ -150,7 +215,7 @@ export default function NewRequestPage() {
             <input
               type="date"
               value={form.fecha_inicio}
-              onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })}
+              onChange={(e) => updateFormField("fecha_inicio", e.target.value)}
               required
               className={inputClass}
             />
@@ -161,7 +226,7 @@ export default function NewRequestPage() {
               type="date"
               value={form.fecha_fin}
               min={form.fecha_inicio}
-              onChange={(e) => setForm({ ...form, fecha_fin: e.target.value })}
+              onChange={(e) => updateFormField("fecha_fin", e.target.value)}
               required
               className={inputClass}
             />
@@ -176,13 +241,13 @@ export default function NewRequestPage() {
                 {dias}
               </span>
             </p>
-            {selectedPeriod ? (
-              <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-md px-3 py-2">
-                El rango seleccionado está dentro de un periodo autorizado disponible.
+            {requestValidationMessage ? (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                {requestValidationMessage}
               </p>
             ) : (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-                El rango seleccionado debe estar dentro de uno de sus periodos disponibles.
+              <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-md px-3 py-2">
+                El rango seleccionado está dentro de un periodo autorizado disponible y respeta sus días disponibles.
               </p>
             )}
           </div>
@@ -192,7 +257,7 @@ export default function NewRequestPage() {
           <span className="text-sm font-medium text-foreground">Observación (opcional)</span>
           <textarea
             value={form.observacion}
-            onChange={(e) => setForm({ ...form, observacion: e.target.value })}
+            onChange={(e) => updateFormField("observacion", e.target.value)}
             rows={3}
             maxLength={300}
             className={`${inputClass} resize-none`}
@@ -208,7 +273,7 @@ export default function NewRequestPage() {
         <div className="flex gap-3 pt-1">
           <button
             type="submit"
-            disabled={saving || dias === 0 || rangeOutsidePeriod}
+            disabled={saving || !isSelectedRangeValid}
             onClick={(e) => handleSubmit(e, "save")}
             className="flex-1 border border-border text-foreground text-sm px-4 py-2 rounded-md font-medium hover:bg-table-hover disabled:opacity-50 transition-colors bg-background"
           >
@@ -216,7 +281,7 @@ export default function NewRequestPage() {
           </button>
           <button
             type="button"
-            disabled={saving || dias === 0 || rangeOutsidePeriod}
+            disabled={saving || !isSelectedRangeValid}
             onClick={(e) => handleSubmit(e as unknown as React.FormEvent, "submit")}
             className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground text-sm px-4 py-2 rounded-md font-medium disabled:opacity-50 transition-colors"
           >
