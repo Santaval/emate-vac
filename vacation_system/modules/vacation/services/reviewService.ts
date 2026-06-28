@@ -51,24 +51,6 @@ export async function aprobar(
         fecha_modificacion: new Date(),
       },
     });
-
-    if (esUltimoPaso) {
-      const updated = await tx.usuario.updateMany({
-        where: {
-          id: solicitud.id_usuario,
-          dias_vacaciones_disponibles: { gte: solicitud.dias_habiles },
-        },
-        data: {
-          dias_vacaciones_disponibles: {
-            decrement: solicitud.dias_habiles,
-          },
-        },
-      });
-
-      if (updated.count === 0) {
-        throw new ReviewError("El solicitante no tiene suficientes días disponibles");
-      }
-    }
   });
 
   return { aprobadoFinal: esUltimoPaso };
@@ -90,8 +72,8 @@ export async function rechazar(
 
   validarPasoYRol(solicitud.paso_actual, rolRevisor);
 
-  await prisma.$transaction([
-    prisma.vac_revision.create({
+  await prisma.$transaction(async (tx) => {
+    await tx.vac_revision.create({
       data: {
         id_solicitud,
         id_usuario: id_usuario_revisor,
@@ -99,10 +81,25 @@ export async function rechazar(
         accion: "Rechazado",
         comentario,
       },
-    }),
-    prisma.vac_solicitud.update({
+    });
+    await tx.vac_solicitud.update({
       where: { id: id_solicitud },
       data: { estado: "Rechazado", paso_actual: null, fecha_modificacion: new Date() },
-    }),
-  ]);
+    });
+    const updated = await tx.usuario.updateMany({
+      where: {
+        id: solicitud.id_usuario,
+        dias_vacaciones_disponibles: { gte: 0 },
+      },
+      data: {
+        dias_vacaciones_disponibles: {
+          increment: solicitud.dias_habiles,
+        },
+      },
+    });
+
+    if (updated.count === 0) {
+      throw new ReviewError("Error al restaurar días disponibles");
+    }
+  });
 }

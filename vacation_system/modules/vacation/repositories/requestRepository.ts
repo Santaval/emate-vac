@@ -34,14 +34,16 @@ export async function createRequest(
 export async function hasOverlappingRequest(
   id_usuario: number,
   fecha_inicio: Date,
-  fecha_fin: Date
+  fecha_fin: Date,
+  excludeId?: number
 ) {
   const existing = await prisma.vac_solicitud.findFirst({
     where: {
       id_usuario,
-      estado: { in: ["Borrador", "Enviado", "Aprobado"] },
+      estado: { in: ["Enviado", "Aprobado"] },
       fecha_inicio: { lte: fecha_fin },
       fecha_fin: { gte: fecha_inicio },
+      ...(excludeId !== undefined && { id: { not: excludeId } }),
     },
     select: { id: true },
   });
@@ -86,12 +88,25 @@ export async function updateStatus(
   estado: vac_estado_enum,
   paso_actual?: number | null
 ) {
-  return prisma.vac_solicitud.update({
-    where: { id },
-    data: {
-      estado,
-      ...(paso_actual !== undefined ? { paso_actual } : {}),
-      fecha_modificacion: new Date(),
-    },
+  return prisma.$transaction(async (tx) => {
+    const solicitud = await tx.vac_solicitud.update({
+      where: { id },
+      data: {
+        estado,
+        paso_actual: estado === "Borrador" ? null : paso_actual !== undefined ? paso_actual : undefined,
+        fecha_modificacion: new Date(),
+      },
+    });
+
+    if (estado === "Borrador") {
+      await tx.usuario.updateMany({
+        where: { id: solicitud.id_usuario },
+        data: {
+          dias_vacaciones_disponibles: { increment: solicitud.dias_habiles },
+        },
+      });
+    }
+
+    return solicitud;
   });
 }

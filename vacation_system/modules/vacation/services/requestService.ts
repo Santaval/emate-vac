@@ -5,6 +5,7 @@ import {
   listByUser,
   listPendingForRole,
   hasOverlappingRequest,
+  updateStatus,
 } from "../repositories/requestRepository";
 import {
   CreateRequestValidationError,
@@ -12,8 +13,9 @@ import {
 } from "../validators/createRequestSchema";
 import { calcularDiasHabiles } from "./calendarService";
 import { findUserById } from "../repositories/userRoleRepository";
+import type { vac_rol_enum, vac_estado_enum } from "@/app/generated/prisma/client";
+import { prisma } from "@/lib/db";
 import { REVIEWER_ROLES } from "../types/userRole";
-import type { vac_rol_enum } from "@/app/generated/prisma/client";
 
 export class RequestError extends Error {
   constructor(message: string, public statusCode = 400) {
@@ -69,6 +71,28 @@ export async function enviarSolicitud(id: number, id_usuario: number) {
   if (solicitud.estado !== "Borrador") {
     throw new RequestError("Solo se pueden enviar solicitudes en estado Borrador");
   }
+  const overlaps = await hasOverlappingRequest(id_usuario, solicitud.fecha_inicio, solicitud.fecha_fin, id);
+  if (overlaps) {
+    throw new RequestError("Ya existe una solicitud para ese rango de fechas");
+  }
+  await prisma.$transaction(async (tx) => { 
+    const updated = await tx.usuario.updateMany({
+      where: {
+        id: solicitud.id_usuario,
+        dias_vacaciones_disponibles: { gte: solicitud.dias_habiles },
+      },
+      data: {
+        dias_vacaciones_disponibles: {
+          decrement: solicitud.dias_habiles,
+        },
+      },
+    });
+
+    if (updated.count === 0) {
+      throw new RequestError("El solicitante no tiene suficientes días disponibles");
+    }
+
+  })
   return submitRequest(id);
 }
 
@@ -91,5 +115,11 @@ export async function obtenerSolicitud(
   if (solicitud.id_usuario !== id_usuario && !esRevisor) {
     throw new RequestError("Acceso denegado", 403);
   }
+  return solicitud;
+}
+
+export async function actualizarEstado(id: number, estado: vac_estado_enum, paso_actual?: number | null) {
+  const solicitud = await updateStatus(id, estado, paso_actual);
+  if (!solicitud) throw new RequestError("Solicitud no encontrada", 404);
   return solicitud;
 }
