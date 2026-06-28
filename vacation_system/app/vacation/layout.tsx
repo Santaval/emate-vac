@@ -10,11 +10,17 @@ export default function VacationLayout({ children }: { children: React.ReactNode
   const { ready, roles } = useAuth();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   if (!ready) {
     // Only check sessionStorage after mount — getToken() reads from the browser,
     // so calling it during SSR always returns null and causes a hydration mismatch.
+    // In standalone dev there is no parent iframe to inject a token, so show a
+    // local login form instead of waiting forever for a SAC_AUTH message.
+    // `getToken()` reads sessionStorage, which only exists on the client, so this
+    // branch must wait until after mount to avoid a server/client hydration mismatch.
     if (mounted && process.env.NODE_ENV === "development" && !getToken()) {
       return <DevLoginForm />;
     }

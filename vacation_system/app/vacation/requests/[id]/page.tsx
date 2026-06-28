@@ -41,13 +41,6 @@ const PASO_ROL_DISPLAY: Record<number, string> = {
   3: "Director de Escuela",
 };
 
-// Prisma enum keys (underscores) — must match what /api/vacation/me returns
-const PASO_ROL_ENUM: Record<number, string> = {
-  1: "Jefe_de_Departamento",
-  2: "Jefe_Administrativo",
-  3: "Director_de_Escuela",
-};
-
 const ESTADO_COLOR: Record<string, string> = {
   Borrador: "bg-zinc-100 text-zinc-600",
   Enviado: "bg-blue-100 text-blue-700",
@@ -193,7 +186,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
       {/* Reviewer actions — only for the reviewer whose step it is */}
       {s.estado === "Enviado" &&
         s.paso_actual !== null &&
-        currentUser?.roles.includes(PASO_ROL_ENUM[s.paso_actual!]) && (
+        currentUser?.roles.includes(PASO_ROL_DISPLAY[s.paso_actual!]) && (
         <div className="bg-card rounded-lg border border-border shadow-sm p-5 space-y-3">
           <h2 className="text-sm font-semibold text-foreground">Acción de revisión</h2>
           <textarea

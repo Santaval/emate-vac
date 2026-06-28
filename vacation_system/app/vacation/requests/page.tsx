@@ -26,8 +26,8 @@ const ESTADOS = ["", "Borrador", "Enviado", "Aprobado", "Rechazado"] as const;
 
 const PASO_LABEL: Record<number, string> = {
   1: "Jefe de Departamento",
-  2: "Director de Escuela",
-  3: "Jefe Administrativo",
+  2: "Jefe Administrativo",
+  3: "Director de Escuela",
 };
 
 export default function RequestsPage() {
