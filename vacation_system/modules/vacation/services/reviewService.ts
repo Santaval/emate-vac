@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/db";
 import { getById } from "../repositories/requestRepository";
-import { PASO_ROL, TOTAL_PASOS } from "../types/userRole";
+import {
+  notifyApplicantApproved,
+  notifyApplicantRejected,
+  notifyPendingReview,
+} from "./emailNotificationService";
+import { getExpectedRoleForStep, TOTAL_PASOS } from "../types/userRole";
 import type { vac_rol_enum } from "@/app/generated/prisma/client";
 
 export class ReviewError extends Error {
@@ -10,25 +15,29 @@ export class ReviewError extends Error {
   }
 }
 
-function validarPasoYRol(pasoActual: number | null, rolRevisor: vac_rol_enum) {
+function obtenerRolRevisorParaPaso(
+  pasoActual: number | null,
+  rolesRevisor: vac_rol_enum[]
+) {
   if (!pasoActual) throw new ReviewError("La solicitud no está en revisión");
-  const rolEsperado = PASO_ROL[pasoActual];
-  if (rolEsperado !== rolRevisor) {
+  const rolEsperado = getExpectedRoleForStep(pasoActual);
+  if (!rolEsperado || !rolesRevisor.includes(rolEsperado)) {
     throw new ReviewError("No tiene el rol requerido para este paso de revisión", 403);
   }
+  return rolEsperado;
 }
 
 export async function aprobar(
   id_solicitud: number,
   id_usuario_revisor: number,
-  rolRevisor: vac_rol_enum,
+  rolesRevisor: vac_rol_enum[],
   comentario?: string
 ) {
   const solicitud = await getById(id_solicitud);
   if (!solicitud) throw new ReviewError("Solicitud no encontrada", 404);
   if (solicitud.estado !== "Enviado") throw new ReviewError("La solicitud no está en estado Enviado");
 
-  validarPasoYRol(solicitud.paso_actual, rolRevisor);
+  const rolRevisor = obtenerRolRevisorParaPaso(solicitud.paso_actual, rolesRevisor);
 
   const esUltimoPaso = solicitud.paso_actual === TOTAL_PASOS;
 
@@ -51,25 +60,13 @@ export async function aprobar(
         fecha_modificacion: new Date(),
       },
     });
-
-    if (esUltimoPaso) {
-      const updated = await tx.usuario.updateMany({
-        where: {
-          id: solicitud.id_usuario,
-          dias_vacaciones_disponibles: { gte: solicitud.dias_habiles },
-        },
-        data: {
-          dias_vacaciones_disponibles: {
-            decrement: solicitud.dias_habiles,
-          },
-        },
-      });
-
-      if (updated.count === 0) {
-        throw new ReviewError("El solicitante no tiene suficientes días disponibles");
-      }
-    }
   });
+
+  if (esUltimoPaso) {
+    await notifyApplicantApproved(solicitud);
+  } else {
+    await notifyPendingReview(solicitud, solicitud.paso_actual! + 1);
+  }
 
   return { aprobadoFinal: esUltimoPaso };
 }
@@ -77,7 +74,7 @@ export async function aprobar(
 export async function rechazar(
   id_solicitud: number,
   id_usuario_revisor: number,
-  rolRevisor: vac_rol_enum,
+  rolesRevisor: vac_rol_enum[],
   comentario: string
 ) {
   if (!comentario?.trim()) {
@@ -88,10 +85,10 @@ export async function rechazar(
   if (!solicitud) throw new ReviewError("Solicitud no encontrada", 404);
   if (solicitud.estado !== "Enviado") throw new ReviewError("La solicitud no está en estado Enviado");
 
-  validarPasoYRol(solicitud.paso_actual, rolRevisor);
+  const rolRevisor = obtenerRolRevisorParaPaso(solicitud.paso_actual, rolesRevisor);
 
-  await prisma.$transaction([
-    prisma.vac_revision.create({
+  await prisma.$transaction(async (tx) => {
+    await tx.vac_revision.create({
       data: {
         id_solicitud,
         id_usuario: id_usuario_revisor,
@@ -99,10 +96,29 @@ export async function rechazar(
         accion: "Rechazado",
         comentario,
       },
-    }),
-    prisma.vac_solicitud.update({
+    });
+    
+    await tx.vac_solicitud.update({
       where: { id: id_solicitud },
       data: { estado: "Rechazado", paso_actual: null, fecha_modificacion: new Date() },
-    }),
-  ]);
+    });
+
+    const updated = await tx.usuario.updateMany({
+      where: {
+        id: solicitud.id_usuario,
+        dias_vacaciones_disponibles: { gte: 0 },
+      },
+      data: {
+        dias_vacaciones_disponibles: {
+          increment: solicitud.dias_habiles,
+        },
+      },
+    });
+
+    if (updated.count === 0) {
+      throw new ReviewError("Error al restaurar días disponibles");
+    }
+  });
+
+  await notifyApplicantRejected(solicitud, comentario);
 }

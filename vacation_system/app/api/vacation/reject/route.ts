@@ -2,19 +2,12 @@ import { unauthorizedResponse, forbiddenResponse } from "@/lib/withAuth";
 import { AuthError } from "@/lib/withAuth";
 import { authenticate } from "@/modules/vacation/auth/authenticate";
 import { rechazar, ReviewError } from "@/modules/vacation/services/reviewService";
-import type { vac_rol_enum } from "@/app/generated/prisma/client";
-
-const REVIEWER_ROLES: vac_rol_enum[] = [
-  "Jefe_de_Departamento",
-  "Director_de_Escuela",
-  "Jefe_Administrativo",
-];
+import { isReviewer } from "@/modules/vacation/types/userRole";
 
 export async function POST(request: Request) {
   try {
     const { user, roles } = await authenticate(request);
-    const reviewerRole = roles.find((r) => REVIEWER_ROLES.includes(r));
-    if (!reviewerRole) return forbiddenResponse("No tiene rol de revisor");
+    if (!isReviewer(roles)) return forbiddenResponse("No tiene rol de revisor");
 
     const body = await request.json();
     if (!body.id_solicitud) {
@@ -24,7 +17,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "El comentario es requerido al rechazar" }, { status: 400 });
     }
 
-    await rechazar(Number(body.id_solicitud), user.id, reviewerRole, body.comentario);
+    await rechazar(Number(body.id_solicitud), user.id, roles, body.comentario);
     return Response.json({ ok: true });
   } catch (e) {
     if (e instanceof AuthError) return unauthorizedResponse();

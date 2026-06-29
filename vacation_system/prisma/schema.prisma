@@ -15,6 +15,7 @@ model usuario {
   nombre                      String          @db.VarChar(100)
   activo                      Boolean         @default(true)
   dias_vacaciones_disponibles Int             @default(0) @db.SmallInt
+  vac_periodo_autorizado      vac_periodo_autorizado[]
   usuario_rol                 usuario_rol[]
   vac_revision                vac_revision[]
   vac_solicitud               vac_solicitud[]
@@ -55,6 +56,21 @@ model vac_revision {
   usuario        usuario         @relation(fields: [id_usuario], references: [id])
 }
 
+model vac_periodo_autorizado {
+  id                 Int                     @id @default(autoincrement())
+  id_usuario         Int
+  fecha_inicio       DateTime                @db.Date
+  fecha_fin          DateTime                @db.Date
+  dias_autorizados   Int                     @db.SmallInt
+  estado             vac_periodo_estado_enum @default(Disponible)
+  observacion        String?                 @db.VarChar(300)
+  fecha_creacion     DateTime                @default(now()) @db.Timestamp(6)
+  fecha_modificacion DateTime                @default(now()) @db.Timestamp(6)
+  usuario            usuario                 @relation(fields: [id_usuario], references: [id], onDelete: Cascade)
+
+  @@index([id_usuario, fecha_inicio])
+}
+
 enum vac_rol_enum {
   Profesor
   Jefe_de_Departamento @map("Jefe de Departamento")
@@ -76,4 +92,10 @@ enum vac_accion_enum {
   Enviado
   Editado
   Cancelado
+}
+
+enum vac_periodo_estado_enum {
+  Disponible
+  Utilizado
+  Vencido
 }

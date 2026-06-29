@@ -18,8 +18,8 @@ type Usuario = {
 const ALL_ROLES = [
   "Profesor",
   "Jefe_de_Departamento",
-  "Director_de_Escuela",
   "Jefe_Administrativo",
+  "Director_de_Escuela",
 ] as const;
 
 const ROL_LABEL: Record<string, string> = {

@@ -7,12 +7,12 @@ import {
   setIdProfesor,
   setVacationDays,
 } from "@/modules/vacation/repositories/userRoleRepository";
-import type { vac_rol_enum } from "@/app/generated/prisma/client";
+import { hasRole, normalizeVacationRoles } from "@/modules/vacation/types/userRole";
 
 export async function GET(request: Request) {
   try {
     const { roles } = await authenticate(request);
-    if (!roles.includes("Jefe_Administrativo")) return forbiddenResponse();
+    if (!hasRole(roles, "Jefe_Administrativo")) return forbiddenResponse();
 
     const users = await listUsers();
     return Response.json(users);
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const { roles } = await authenticate(request);
-    if (!roles.includes("Jefe_Administrativo")) return forbiddenResponse();
+    if (!hasRole(roles, "Jefe_Administrativo")) return forbiddenResponse();
 
     const body = await request.json();
     if (!body.id_usuario) {
@@ -33,7 +33,11 @@ export async function PATCH(request: Request) {
     }
 
     if (body.roles !== undefined) {
-      await setUserRoles(Number(body.id_usuario), body.roles as vac_rol_enum[]);
+      const rolesToSave = normalizeVacationRoles(body.roles);
+      if (!rolesToSave) {
+        return Response.json({ error: "roles inválidos" }, { status: 400 });
+      }
+      await setUserRoles(Number(body.id_usuario), rolesToSave);
     }
     if (body.id_profesor !== undefined) {
       await setIdProfesor(Number(body.id_usuario), Number(body.id_profesor));
