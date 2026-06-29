@@ -7,6 +7,7 @@ const allowedOrigins = (process.env.ALLOWED_FRAME_ORIGINS || "http://localhost:3
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  serverExternalPackages: ["nodemailer"],
   async headers() {
     return [
       {

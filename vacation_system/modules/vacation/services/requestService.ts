@@ -3,7 +3,7 @@ import {
   submitRequest,
   getById,
   listByUser,
-  listPendingForRole,
+  listPendingForRoles,
   hasOverlappingRequest,
   updateStatus,
 } from "../repositories/requestRepository";
@@ -12,10 +12,13 @@ import {
   validateCreateRequestInput,
 } from "../validators/createRequestSchema";
 import { calcularDiasHabiles } from "./calendarService";
+import { findAvailablePeriodCoveringRange } from "../repositories/authorizedPeriodRepository";
 import { findUserById } from "../repositories/userRoleRepository";
 import type { vac_rol_enum, vac_estado_enum } from "@/app/generated/prisma/client";
 import { prisma } from "@/lib/db";
-import { REVIEWER_ROLES } from "../types/userRole";
+import { notifyPendingReview } from "./emailNotificationService";
+import { getReviewerRoles, hasRole, isReviewer } from "../types/userRole";
+
 
 export class RequestError extends Error {
   constructor(message: string, public statusCode = 400) {
@@ -47,8 +50,17 @@ export async function crearSolicitud(
 
   const user = await findUserById(id_usuario);
   if (!user) throw new RequestError("Usuario no encontrado", 404);
+
+  const authorizedPeriod = await findAvailablePeriodCoveringRange(id_usuario, fecha_inicio, fecha_fin);
+  if (!authorizedPeriod) {
+    throw new RequestError("El rango seleccionado debe estar dentro de un periodo autorizado disponible");
+  }
+
   if (dias_habiles > user.dias_vacaciones_disponibles) {
     throw new RequestError("La solicitud supera los días de vacaciones disponibles");
+  }
+  if (dias_habiles > authorizedPeriod.dias_autorizados) {
+    throw new RequestError("La solicitud supera los días autorizados para el periodo seleccionado");
   }
 
   const overlaps = await hasOverlappingRequest(id_usuario, fecha_inicio, fecha_fin);
@@ -71,11 +83,12 @@ export async function enviarSolicitud(id: number, id_usuario: number) {
   if (solicitud.estado !== "Borrador") {
     throw new RequestError("Solo se pueden enviar solicitudes en estado Borrador");
   }
-  const overlaps = await hasOverlappingRequest(id_usuario, solicitud.fecha_inicio, solicitud.fecha_fin, id);
+   const overlaps = await hasOverlappingRequest(id_usuario, solicitud.fecha_inicio, solicitud.fecha_fin, id);
   if (overlaps) {
     throw new RequestError("Ya existe una solicitud para ese rango de fechas");
   }
-  await prisma.$transaction(async (tx) => { 
+
+  await prisma.$transaction(async (tx) => {
     const updated = await tx.usuario.updateMany({
       where: {
         id: solicitud.id_usuario,
@@ -91,17 +104,29 @@ export async function enviarSolicitud(id: number, id_usuario: number) {
     if (updated.count === 0) {
       throw new RequestError("El solicitante no tiene suficientes días disponibles");
     }
+  });
 
-  })
-  return submitRequest(id);
+  const updated = await submitRequest(id);
+  const solicitudEnviada = await getById(id);
+  if (solicitudEnviada) {
+    await notifyPendingReview(solicitudEnviada, solicitudEnviada.paso_actual);
+  }
+
+  return updated;
 }
 
 export async function obtenerSolicitudesPropias(id_usuario: number) {
   return listByUser(id_usuario);
 }
 
-export async function obtenerPendientesParaRol(rol: vac_rol_enum) {
-  return listPendingForRole(rol);
+export async function obtenerPendientesParaRoles(roles: vac_rol_enum[]) {
+  return listPendingForRoles(getReviewerRoles(roles));
+}
+
+export function validarPuedeCrearSolicitud(roles: vac_rol_enum[]) {
+  if (!hasRole(roles, "Profesor")) {
+    throw new RequestError("Solo el rol Profesor puede crear solicitudes", 403);
+  }
 }
 
 export async function obtenerSolicitud(
@@ -111,8 +136,7 @@ export async function obtenerSolicitud(
 ) {
   const solicitud = await getById(id);
   if (!solicitud) throw new RequestError("Solicitud no encontrada", 404);
-  const esRevisor = roles.some((r) => REVIEWER_ROLES.includes(r));
-  if (solicitud.id_usuario !== id_usuario && !esRevisor) {
+  if (solicitud.id_usuario !== id_usuario && !isReviewer(roles)) {
     throw new RequestError("Acceso denegado", 403);
   }
   return solicitud;
