@@ -26,8 +26,19 @@ export async function createRequest(
     observacion?: string;
   }
 ) {
-  return prisma.vac_solicitud.create({
-    data: { id_usuario, ...data, estado: "Borrador" },
+  return prisma.$transaction(async (tx) => {
+    const solicitud = await tx.vac_solicitud.create({
+      data: { id_usuario, ...data, estado: "Borrador" },
+    });
+    await tx.vac_revision.create({
+      data: {
+        id_solicitud: solicitud.id,
+        id_usuario,
+        rol_revisor: "Profesor",
+        accion: "Creado",
+      },
+    });
+    return solicitud;
   });
 }
 
@@ -51,10 +62,21 @@ export async function hasOverlappingRequest(
   return existing !== null;
 }
 
-export async function submitRequest(id: number) {
-  return prisma.vac_solicitud.update({
-    where: { id },
-    data: { estado: "Enviado", paso_actual: 1, fecha_modificacion: new Date() },
+export async function submitRequest(id: number, id_usuario: number) {
+  return prisma.$transaction(async (tx) => {
+    const solicitud = await tx.vac_solicitud.update({
+      where: { id },
+      data: { estado: "Enviado", paso_actual: 1, fecha_modificacion: new Date() },
+    });
+    await tx.vac_revision.create({
+      data: {
+        id_solicitud: id,
+        id_usuario,
+        rol_revisor: "Profesor",
+        accion: "Enviado",
+      },
+    });
+    return solicitud;
   });
 }
 
