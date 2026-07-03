@@ -106,7 +106,7 @@ export async function enviarSolicitud(id: number, id_usuario: number) {
     }
   });
 
-  const updated = await submitRequest(id);
+  const updated = await submitRequest(id, id_usuario);
   const solicitudEnviada = await getById(id);
   if (solicitudEnviada) {
     await notifyPendingReview(solicitudEnviada, solicitudEnviada.paso_actual);
